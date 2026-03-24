@@ -1,0 +1,4 @@
+uvで実行すること
+
+docsに公開APIのデータ
+pythonにHTMLのパーサー
