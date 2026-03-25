@@ -1,0 +1,4 @@
+storeFile=/absolute/path/to/daken-android-upload.jks
+storePassword=replace-with-keystore-password
+keyAlias=daken-upload
+keyPassword=replace-with-key-password
