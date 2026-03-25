@@ -316,7 +316,7 @@ class DownloadStore {
       );
 
       return _downloadJobRecordFromRow(row, attempts: attempts);
-    });
+    }, notify: false);
   }
 
   Future<void> completeJob(DownloadJobRecord job) async {

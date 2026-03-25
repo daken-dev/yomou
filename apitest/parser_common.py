@@ -89,6 +89,20 @@ def absolute_url(url: str | None, base_url: str = BASE_URL) -> str | None:
     return urljoin(base_url, url)
 
 
+def extract_ncode(url: str) -> str | None:
+    match = re.search(r"https://ncode\.syosetu\.com/([a-z0-9]+)/?", url, re.IGNORECASE)
+    if not match:
+        return None
+    return match.group(1).lower()
+
+
+def build_info_url(url: str) -> str | None:
+    ncode = extract_ncode(url)
+    if not ncode:
+        return None
+    return f"{BASE_URL}/novelview/infotop/ncode/{ncode}/"
+
+
 def parse_meta_tags(soup: BeautifulSoup) -> dict:
     meta: dict[str, str] = {}
     for tag in soup.find_all("meta"):

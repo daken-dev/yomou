@@ -11,8 +11,12 @@ class NovelListItem extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final savedIds = ref.watch(savedNovelIdsProvider(novel.site));
-    final isSaved = savedIds.asData?.value.contains(novel.id) ?? false;
+    final isSaved = ref.watch(
+      savedNovelIdsProvider(novel.site).select((savedIds) {
+        final value = savedIds.value;
+        return value?.contains(novel.id) ?? false;
+      }),
+    );
 
     return ListTile(
       onTap: onTap,

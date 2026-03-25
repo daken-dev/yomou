@@ -37,11 +37,19 @@ final downloadSchedulerBootstrapProvider = Provider<void>((ref) {
   ref.watch(downloadSchedulerProvider);
 });
 
-final downloadChangeTickProvider = StreamProvider<void>((ref) {
-  return ref.watch(downloadStoreProvider).changes;
+final downloadChangeTickProvider = StreamProvider<int>((ref) async* {
+  var tick = 0;
+  yield tick;
+
+  await for (final _ in ref.watch(downloadStoreProvider).changes) {
+    tick += 1;
+    yield tick;
+  }
 });
 
-final savedNovelsProvider = FutureProvider<List<SavedNovelOverview>>((ref) async {
+final savedNovelsProvider = FutureProvider<List<SavedNovelOverview>>((
+  ref,
+) async {
   ref.watch(downloadChangeTickProvider);
   return ref.watch(downloadStoreProvider).listSavedNovels();
 });
@@ -54,7 +62,9 @@ final savedNovelIdsProvider = FutureProvider.family<Set<String>, NovelSite>((
   return ref.watch(downloadStoreProvider).listSavedNovelIds(site);
 });
 
-final downloadStatusProvider = FutureProvider<DownloadStatusSnapshot>((ref) async {
+final downloadStatusProvider = FutureProvider<DownloadStatusSnapshot>((
+  ref,
+) async {
   ref.watch(downloadChangeTickProvider);
   return ref.watch(downloadStoreProvider).getStatusSnapshot();
 });

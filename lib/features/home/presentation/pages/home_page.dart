@@ -10,37 +10,35 @@ class HomePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final savedNovels = ref.watch(savedNovelsProvider);
+    final items = savedNovels.value;
 
     return AppScaffold(
       title: '保存済み作品',
-      body: savedNovels.when(
-        loading: () => const Center(child: Text('Loading...')),
-        error: (error, _) => ListView(
+      body: switch ((items, savedNovels.hasError)) {
+        (final items?, _) =>
+          items.isEmpty
+              ? ListView(
+                  children: const [ListTile(title: Text('保存済み作品はありません。'))],
+                )
+              : ListView(
+                  children: [
+                    for (final item in items)
+                      SavedNovelTile(
+                        novel: item,
+                        onRefresh: () => ref
+                            .read(downloadSchedulerProvider)
+                            .refreshNovel(item.site, item.id),
+                      ),
+                  ],
+                ),
+        (_, true) => ListView(
           children: [
             const ListTile(title: Text('保存済み作品の取得に失敗しました。')),
-            ListTile(title: Text(error.toString())),
+            ListTile(title: Text(savedNovels.error.toString())),
           ],
         ),
-        data: (items) {
-          if (items.isEmpty) {
-            return ListView(
-              children: const [ListTile(title: Text('保存済み作品はありません。'))],
-            );
-          }
-
-          return ListView(
-            children: [
-              for (final item in items)
-                SavedNovelTile(
-                  novel: item,
-                  onRefresh: () => ref
-                      .read(downloadSchedulerProvider)
-                      .refreshNovel(item.site, item.id),
-                ),
-            ],
-          );
-        },
-      ),
+        _ => const Center(child: Text('Loading...')),
+      },
     );
   }
 }
