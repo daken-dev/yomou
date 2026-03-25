@@ -1,3 +1,4 @@
+import 'package:yomou/features/narou/domain/entities/narou_genre.dart';
 import 'package:yomou/features/novels/domain/entities/novel_site.dart';
 import 'package:yomou/features/novels/domain/entities/novel_summary.dart';
 
@@ -58,33 +59,6 @@ class NarouNovelRecord {
   final int end;
   final int novelType;
 
-  static String genreName(int code) {
-    return switch (code) {
-      101 => '異世界〔恋愛〕',
-      102 => '現実世界〔恋愛〕',
-      201 => 'ハイファンタジー',
-      202 => 'ローファンタジー',
-      301 => '純文学',
-      302 => 'ヒューマンドラマ',
-      303 => '歴史',
-      304 => '推理',
-      305 => 'ホラー',
-      306 => 'アクション',
-      307 => 'コメディー',
-      401 => 'VRゲーム〔SF〕',
-      402 => '宇宙〔SF〕',
-      403 => '空想科学〔SF〕',
-      404 => 'パニック〔SF〕',
-      9901 => 'ノンジャンル',
-      9902 => 'エッセイ',
-      9903 => 'その他',
-      9904 => '童話',
-      9999 => 'リプレイ',
-      9801 => '詩',
-      _ => '',
-    };
-  }
-
   NovelSummary toNovelSummary() {
     return NovelSummary(
       site: NovelSite.narou,
@@ -92,7 +66,7 @@ class NarouNovelRecord {
       title: title,
       author: writer,
       story: story.replaceAll('\n', ' ').trim(),
-      genre: genreName(genre),
+      genre: NarouGenre.labelOf(genre),
       keyword: keyword,
       episodeCount: generalAllNo,
       characterCount: length,
