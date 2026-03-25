@@ -1,5 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:yomou/features/aozora/presentation/pages/aozora_episode_reader_page.dart';
+import 'package:yomou/features/aozora/presentation/pages/aozora_novel_detail_page.dart';
+import 'package:yomou/features/aozora/presentation/pages/aozora_search_page.dart';
+import 'package:yomou/features/aozora/presentation/pages/aozora_search_results_page.dart';
 import 'package:yomou/features/downloads/presentation/pages/download_status_page.dart';
 import 'package:yomou/features/home/presentation/pages/home_page.dart';
 import 'package:yomou/features/narou/presentation/pages/narou_episode_reader_page.dart';
@@ -67,6 +71,41 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             order: NovelSearchOrderX.fromQueryValue(
               state.uri.queryParameters['order'],
             ),
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/aozora/search',
+        builder: (context, state) => const AozoraSearchPage(),
+      ),
+      GoRoute(
+        path: '/aozora/search/results',
+        builder: (context, state) => AozoraSearchResultsPage(
+          request: NovelSearchRequest(
+            site: NovelSite.aozora,
+            query: state.uri.queryParameters['q'] ?? '',
+            target: NovelSearchTargetX.fromQueryValue(
+              state.uri.queryParameters['target'],
+            ),
+            order: NovelSearchOrder.newest,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/aozora/novel/:id',
+        builder: (context, state) =>
+            AozoraNovelDetailPage(novelId: state.pathParameters['id'] ?? ''),
+      ),
+      GoRoute(
+        path: '/aozora/novel/:id/read',
+        builder: (context, state) => AozoraEpisodeReaderPage(
+          novelId: state.pathParameters['id'] ?? '',
+          textZipUrl: state.uri.queryParameters['zip'],
+          title: state.uri.queryParameters['title'],
+          author: state.uri.queryParameters['author'],
+          resumePage: int.tryParse(state.uri.queryParameters['resumePage'] ?? ''),
+          resumePageCount: int.tryParse(
+            state.uri.queryParameters['resumePageCount'] ?? '',
           ),
         ),
       ),

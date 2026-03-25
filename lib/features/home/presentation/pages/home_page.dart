@@ -5,6 +5,7 @@ import 'package:yomou/features/downloads/application/download_providers.dart';
 import 'package:yomou/features/downloads/domain/entities/saved_novel_overview.dart';
 import 'package:yomou/features/downloads/presentation/widgets/download_summary_widgets.dart';
 import 'package:yomou/features/navigation/presentation/widgets/app_scaffold.dart';
+import 'package:yomou/features/novels/domain/entities/novel_site.dart';
 import 'package:yomou/features/settings/application/settings_providers.dart';
 import 'package:yomou/features/settings/domain/entities/app_settings.dart';
 
@@ -230,6 +231,25 @@ class _HomeSavedNovelTile extends ConsumerWidget {
     SavedNovelOverview novel, {
     required bool openDirectlyInReader,
   }) {
+    if (novel.site == NovelSite.aozora) {
+      if (openDirectlyInReader && novel.hasResumeTarget) {
+        final queryParameters = <String, String>{};
+        if (novel.resumeEpisodeUrl case final episodeUrl?) {
+          queryParameters['zip'] = episodeUrl;
+        }
+        if (novel.hasResumePageProgress) {
+          queryParameters['resumePage'] = novel.resumePageNumber.toString();
+          queryParameters['resumePageCount'] = novel.resumePageCount.toString();
+        }
+
+        return Uri(
+          path: '/aozora/novel/${novel.id}/read',
+          queryParameters: queryParameters.isEmpty ? null : queryParameters,
+        ).toString();
+      }
+      return '/aozora/novel/${novel.id}';
+    }
+
     if (openDirectlyInReader && novel.hasResumeTarget) {
       final queryParameters = <String, String>{};
       if (novel.resumeEpisodeUrl case final episodeUrl?) {

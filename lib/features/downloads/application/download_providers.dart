@@ -2,6 +2,10 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:yomou/core/database/app_database.dart';
+import 'package:yomou/core/network/dio_provider.dart';
+import 'package:yomou/features/aozora/data/aozora_index_client.dart';
+import 'package:yomou/features/aozora/data/aozora_index_store.dart';
+import 'package:yomou/features/aozora/data/aozora_text_client.dart';
 import 'package:yomou/features/downloads/application/download_scheduler.dart';
 import 'package:yomou/features/downloads/data/download_store.dart';
 import 'package:yomou/features/downloads/data/narou_web_client.dart';
@@ -22,10 +26,24 @@ final downloadStoreProvider = Provider<DownloadStore>((ref) {
   return DownloadStore(ref.watch(appDatabaseProvider));
 });
 
+final aozoraIndexStoreProvider = Provider<AozoraIndexStore>((ref) {
+  return AozoraIndexStore(ref.watch(appDatabaseProvider));
+});
+
+final aozoraIndexClientProvider = Provider<AozoraIndexClient>((ref) {
+  return AozoraIndexClient(ref.watch(dioProvider));
+});
+
+final aozoraTextClientProvider = Provider<AozoraTextClient>((ref) {
+  return AozoraTextClient(ref.watch(dioProvider));
+});
+
 final downloadSchedulerProvider = Provider<DownloadScheduler>((ref) {
   final scheduler = DownloadScheduler(
     ref.watch(downloadStoreProvider),
     ref.watch(narouWebClientProvider),
+    ref.watch(aozoraIndexStoreProvider),
+    ref.watch(aozoraTextClientProvider),
   );
   unawaited(scheduler.start());
   ref.onDispose(() {

@@ -70,6 +70,16 @@ class AppDrawer extends StatelessWidget {
                   onTap: () => _go(context, '/narou/search'),
                   indent: true,
                 ),
+                const _SectionHeader(title: '青空文庫'),
+                _DrawerItem(
+                  icon: Icons.menu_book_outlined,
+                  selectedIcon: Icons.menu_book,
+                  label: '検索',
+                  location: '/aozora/search',
+                  currentLocation: currentLocation,
+                  onTap: () => _go(context, '/aozora/search'),
+                  indent: true,
+                ),
                 const Divider(height: 1),
                 _DrawerItem(
                   icon: Icons.download_outlined,

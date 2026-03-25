@@ -895,6 +895,137 @@ class DownloadStore {
     });
   }
 
+  Future<SyncNovelApplyResult> applyAozoraNovelSync({
+    required String novelId,
+    required String title,
+    required String authorName,
+    required String? summary,
+    required String? cardUrl,
+    required String textZipUrl,
+    required bool force,
+    required Duration refreshInterval,
+  }) async {
+    final now = _isoNow();
+    return _database.write((db) {
+      final savedRows = db.select(
+        '''
+        SELECT 1
+        FROM saved_novels
+        WHERE site = ?
+          AND novel_id = ?
+        LIMIT 1
+        ''',
+        <Object?>[NovelSite.aozora.name, novelId],
+      );
+      if (savedRows.isEmpty) {
+        return const SyncNovelApplyResult.ready([]);
+      }
+
+      db.execute(
+        '''
+        UPDATE saved_novels
+        SET title = ?,
+            author_name = ?,
+            summary = ?,
+            info_url = ?,
+            toc_url = ?,
+            total_episodes = 1,
+            toc_page_count = 1,
+            update_locked = 0,
+            lock_reason = NULL,
+            last_error = NULL,
+            last_checked_at = ?,
+            next_refresh_at = ?,
+            updated_at = ?
+        WHERE site = ?
+          AND novel_id = ?
+        ''',
+        <Object?>[
+          title,
+          authorName,
+          summary,
+          cardUrl,
+          cardUrl,
+          now,
+          _now().add(refreshInterval).toIso8601String(),
+          now,
+          NovelSite.aozora.name,
+          novelId,
+        ],
+      );
+
+      final existingRows = db.select(
+        '''
+        SELECT is_downloaded
+        FROM novel_episodes
+        WHERE site = ?
+          AND novel_id = ?
+          AND episode_no = 1
+        LIMIT 1
+        ''',
+        <Object?>[NovelSite.aozora.name, novelId],
+      );
+      final existing = existingRows.isEmpty ? null : existingRows.first;
+      final wasDownloaded = existing == null
+          ? false
+          : _boolValue(existing['is_downloaded']);
+      final needsDownload = force || !wasDownloaded;
+
+      if (existing == null) {
+        db.execute(
+          '''
+          INSERT INTO novel_episodes (
+            site,
+            novel_id,
+            episode_no,
+            title,
+            episode_url,
+            index_page,
+            is_downloaded,
+            updated_at
+          ) VALUES (?, ?, 1, ?, ?, 1, ?, ?)
+          ''',
+          <Object?>[
+            NovelSite.aozora.name,
+            novelId,
+            title,
+            textZipUrl,
+            needsDownload ? 0 : 1,
+            now,
+          ],
+        );
+      } else {
+        db.execute(
+          '''
+          UPDATE novel_episodes
+          SET title = ?,
+              episode_url = ?,
+              is_downloaded = ?,
+              updated_at = ?
+          WHERE site = ?
+            AND novel_id = ?
+            AND episode_no = 1
+          ''',
+          <Object?>[
+            title,
+            textZipUrl,
+            needsDownload ? 0 : 1,
+            now,
+            NovelSite.aozora.name,
+            novelId,
+          ],
+        );
+      }
+
+      if (!needsDownload) {
+        return const SyncNovelApplyResult.ready([]);
+      }
+      return const SyncNovelApplyResult.ready([
+        EpisodeDownloadPlan(episodeNo: 1, priority: 3000),
+      ]);
+    });
+  }
+
   Future<void> markEpisodeDownloaded({
     required NovelSite site,
     required String novelId,
@@ -993,6 +1124,83 @@ class DownloadStore {
           site.name,
           novelId,
         ],
+      );
+    });
+  }
+
+  Future<void> markAozoraEpisodeDownloaded({
+    required String novelId,
+    required int episodeNo,
+    required String? title,
+    required String body,
+    required int excludingJobId,
+  }) async {
+    final now = _isoNow();
+    await _database.write((db) {
+      db.execute(
+        '''
+        UPDATE novel_episodes
+        SET title = COALESCE(?, title),
+            body = ?,
+            body_html = NULL,
+            is_downloaded = 1,
+            last_downloaded_at = ?,
+            updated_at = ?
+        WHERE site = ?
+          AND novel_id = ?
+          AND episode_no = ?
+        ''',
+        <Object?>[
+          title,
+          body,
+          now,
+          now,
+          NovelSite.aozora.name,
+          novelId,
+          episodeNo,
+        ],
+      );
+
+      db.execute(
+        '''
+        UPDATE saved_novels
+        SET last_error = NULL,
+            last_synced_at = ?
+        WHERE site = ?
+          AND novel_id = ?
+        ''',
+        <Object?>[now, NovelSite.aozora.name, novelId],
+      );
+    });
+  }
+
+  Future<EpisodeContent?> getEpisodeContent({
+    required NovelSite site,
+    required String novelId,
+    required int episodeNo,
+  }) async {
+    return _database.read((db) {
+      final rows = db.select(
+        '''
+        SELECT title, preface, body, afterword, episode_url
+        FROM novel_episodes
+        WHERE site = ?
+          AND novel_id = ?
+          AND episode_no = ?
+        LIMIT 1
+        ''',
+        <Object?>[site.name, novelId, episodeNo],
+      );
+      if (rows.isEmpty) {
+        return null;
+      }
+      final row = rows.first;
+      return EpisodeContent(
+        title: row['title'] as String?,
+        preface: row['preface'] as String?,
+        body: row['body'] as String?,
+        afterword: row['afterword'] as String?,
+        episodeUrl: row['episode_url'] as String?,
       );
     });
   }
@@ -1286,12 +1494,14 @@ class DownloadStore {
     return switch (site) {
       NovelSite.narou =>
         'https://ncode.syosetu.com/novelview/infotop/ncode/${novelId.toLowerCase()}/',
+      NovelSite.aozora => null,
     };
   }
 
   String? _tocUrlForId(NovelSite site, String novelId) {
     return switch (site) {
       NovelSite.narou => 'https://ncode.syosetu.com/${novelId.toLowerCase()}/',
+      NovelSite.aozora => null,
     };
   }
 
@@ -1403,4 +1613,20 @@ class DownloadJobCounts {
   final int queuedJobs;
   final int runningJobs;
   final int failedJobs;
+}
+
+class EpisodeContent {
+  const EpisodeContent({
+    required this.title,
+    required this.preface,
+    required this.body,
+    required this.afterword,
+    required this.episodeUrl,
+  });
+
+  final String? title;
+  final String? preface;
+  final String? body;
+  final String? afterword;
+  final String? episodeUrl;
 }

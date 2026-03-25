@@ -93,7 +93,7 @@ class AppDatabase {
 
     if (currentVersion == 0) {
       _createSchema(database);
-      database.execute('PRAGMA user_version = 3');
+      database.execute('PRAGMA user_version = 6');
       return;
     }
 
@@ -109,7 +109,15 @@ class AppDatabase {
       _migrateToV4(database);
     }
 
-    database.execute('PRAGMA user_version = 4');
+    if (currentVersion < 5) {
+      _migrateToV5(database);
+    }
+
+    if (currentVersion < 6) {
+      _migrateToV6(database);
+    }
+
+    database.execute('PRAGMA user_version = 6');
   }
 
   void _createSchema(sqlite.Database database) {
@@ -240,6 +248,55 @@ class AppDatabase {
         reader_show_afterword INTEGER NOT NULL DEFAULT 1
       )
     ''');
+
+    database.execute('''
+      CREATE TABLE IF NOT EXISTS aozora_index_meta (
+        id INTEGER NOT NULL PRIMARY KEY CHECK (id = 1),
+        fetched_at TEXT NOT NULL,
+        source_url TEXT NOT NULL,
+        total_works INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+
+    database.execute('''
+      CREATE TABLE IF NOT EXISTS aozora_works (
+        work_id TEXT NOT NULL PRIMARY KEY,
+        title TEXT NOT NULL,
+        title_reading TEXT,
+        subtitle TEXT,
+        subtitle_reading TEXT,
+        original_title TEXT,
+        first_appearance TEXT,
+        classification TEXT,
+        writing_style TEXT,
+        work_copyright TEXT,
+        publication_date TEXT,
+        csv_updated_date TEXT,
+        author_name TEXT NOT NULL,
+        role TEXT,
+        birth_date TEXT,
+        death_date TEXT,
+        person_copyright TEXT,
+        card_url TEXT,
+        text_zip_url TEXT NOT NULL,
+        text_encoding TEXT,
+        html_url TEXT,
+        html_encoding TEXT,
+        inputter TEXT,
+        proofreader TEXT,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+
+    database.execute('''
+      CREATE INDEX IF NOT EXISTS aozora_works_title_idx
+      ON aozora_works(title)
+    ''');
+
+    database.execute('''
+      CREATE INDEX IF NOT EXISTS aozora_works_author_idx
+      ON aozora_works(author_name)
+    ''');
   }
 
   void _migrateToV2(sqlite.Database database) {
@@ -277,5 +334,93 @@ class AppDatabase {
       ALTER TABLE app_settings
       ADD COLUMN reader_tap_pattern TEXT NOT NULL DEFAULT 'left_center_right'
     ''');
+  }
+
+  void _migrateToV5(sqlite.Database database) {
+    database.execute('''
+      CREATE TABLE IF NOT EXISTS aozora_index_meta (
+        id INTEGER NOT NULL PRIMARY KEY CHECK (id = 1),
+        fetched_at TEXT NOT NULL,
+        source_url TEXT NOT NULL,
+        total_works INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+
+    database.execute('''
+      CREATE TABLE IF NOT EXISTS aozora_works (
+        work_id TEXT NOT NULL PRIMARY KEY,
+        title TEXT NOT NULL,
+        title_reading TEXT,
+        subtitle TEXT,
+        subtitle_reading TEXT,
+        original_title TEXT,
+        first_appearance TEXT,
+        classification TEXT,
+        writing_style TEXT,
+        work_copyright TEXT,
+        publication_date TEXT,
+        csv_updated_date TEXT,
+        author_name TEXT NOT NULL,
+        role TEXT,
+        birth_date TEXT,
+        death_date TEXT,
+        person_copyright TEXT,
+        card_url TEXT,
+        text_zip_url TEXT NOT NULL,
+        text_encoding TEXT,
+        html_url TEXT,
+        html_encoding TEXT,
+        inputter TEXT,
+        proofreader TEXT,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+
+    database.execute('''
+      CREATE INDEX IF NOT EXISTS aozora_works_title_idx
+      ON aozora_works(title)
+    ''');
+
+    database.execute('''
+      CREATE INDEX IF NOT EXISTS aozora_works_author_idx
+      ON aozora_works(author_name)
+    ''');
+  }
+
+  void _migrateToV6(sqlite.Database database) {
+    _addColumnIfMissing(database, 'aozora_works', 'subtitle_reading', 'TEXT');
+    _addColumnIfMissing(database, 'aozora_works', 'original_title', 'TEXT');
+    _addColumnIfMissing(database, 'aozora_works', 'first_appearance', 'TEXT');
+    _addColumnIfMissing(database, 'aozora_works', 'classification', 'TEXT');
+    _addColumnIfMissing(database, 'aozora_works', 'writing_style', 'TEXT');
+    _addColumnIfMissing(database, 'aozora_works', 'work_copyright', 'TEXT');
+    _addColumnIfMissing(database, 'aozora_works', 'publication_date', 'TEXT');
+    _addColumnIfMissing(database, 'aozora_works', 'csv_updated_date', 'TEXT');
+    _addColumnIfMissing(database, 'aozora_works', 'role', 'TEXT');
+    _addColumnIfMissing(database, 'aozora_works', 'birth_date', 'TEXT');
+    _addColumnIfMissing(database, 'aozora_works', 'death_date', 'TEXT');
+    _addColumnIfMissing(database, 'aozora_works', 'person_copyright', 'TEXT');
+    _addColumnIfMissing(database, 'aozora_works', 'text_encoding', 'TEXT');
+    _addColumnIfMissing(database, 'aozora_works', 'html_url', 'TEXT');
+    _addColumnIfMissing(database, 'aozora_works', 'html_encoding', 'TEXT');
+    _addColumnIfMissing(database, 'aozora_works', 'inputter', 'TEXT');
+    _addColumnIfMissing(database, 'aozora_works', 'proofreader', 'TEXT');
+  }
+
+  void _addColumnIfMissing(
+    sqlite.Database database,
+    String tableName,
+    String columnName,
+    String columnType,
+  ) {
+    final rows = database.select('PRAGMA table_info($tableName)');
+    for (final row in rows) {
+      if ((row['name'] as String?) == columnName) {
+        return;
+      }
+    }
+    database.execute(
+      'ALTER TABLE $tableName ADD COLUMN $columnName $columnType',
+    );
   }
 }

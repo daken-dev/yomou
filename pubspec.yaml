@@ -43,6 +43,9 @@ dependencies:
   path_provider: ^2.1.5
   sqlite3: ^2.9.3
   sqlite3_flutter_libs: ^0.5.38
+  archive: ^4.0.9
+  csv: ^6.0.0
+  jis0208: ^1.0.1
 
 dev_dependencies:
   flutter_test:

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yomou/features/novels/domain/entities/novel_search_request.dart';
+import 'package:yomou/features/novels/domain/entities/novel_site.dart';
 import 'package:yomou/features/rankings/presentation/widgets/ranking_item_card.dart';
 import 'package:yomou/features/search/application/search_result_feed_controller.dart';
 
@@ -158,7 +159,7 @@ class SearchResultList extends ConsumerWidget {
                   novel: novel,
                   rank: index + 1,
                   showRankHighlight: showRankHighlight,
-                  onTap: () => context.push('/narou/novel/${novel.id}'),
+                  onTap: () => context.push(_detailLocation(novel.site, novel.id)),
                 );
               }
 
@@ -237,5 +238,12 @@ class SearchResultList extends ConsumerWidget {
       return 1;
     }
     return 0;
+  }
+
+  String _detailLocation(NovelSite site, String id) {
+    return switch (site) {
+      NovelSite.narou => '/narou/novel/$id',
+      NovelSite.aozora => '/aozora/novel/$id',
+    };
   }
 }

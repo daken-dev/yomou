@@ -152,7 +152,7 @@ class SavedNovelTile extends ConsumerWidget {
         value: _NovelMenuAction.episodes,
         child: ListTile(
           leading: Icon(Icons.list_rounded),
-          title: Text('エピソード一覧'),
+          title: Text('作品詳細'),
           dense: true,
           contentPadding: EdgeInsets.zero,
         ),
@@ -227,10 +227,27 @@ class SavedNovelTile extends ConsumerWidget {
   String _detailLocation() {
     return switch (novel.site) {
       NovelSite.narou => '/narou/novel/${novel.id}',
+      NovelSite.aozora => '/aozora/novel/${novel.id}',
     };
   }
 
   String _resumeLocation() {
+    if (novel.site == NovelSite.aozora) {
+      final queryParameters = <String, String>{};
+      if (novel.resumeEpisodeUrl case final episodeUrl?) {
+        queryParameters['zip'] = episodeUrl;
+      }
+      if (novel.hasResumePageProgress) {
+        queryParameters['resumePage'] = novel.resumePageNumber.toString();
+        queryParameters['resumePageCount'] = novel.resumePageCount.toString();
+      }
+
+      return Uri(
+        path: '/aozora/novel/${novel.id}/read',
+        queryParameters: queryParameters.isEmpty ? null : queryParameters,
+      ).toString();
+    }
+
     final queryParameters = <String, String>{};
     if (novel.resumeEpisodeUrl case final episodeUrl?) {
       queryParameters['url'] = episodeUrl;

@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:yomou/features/aozora/data/aozora_index_store.dart';
+import 'package:yomou/features/aozora/data/aozora_text_client.dart';
 import 'package:yomou/features/downloads/data/download_store.dart';
 import 'package:yomou/features/downloads/data/narou_web_client.dart';
 import 'package:yomou/features/downloads/domain/entities/download_job_overview.dart';
@@ -7,8 +9,13 @@ import 'package:yomou/features/novels/domain/entities/novel_site.dart';
 import 'package:yomou/features/novels/domain/entities/novel_summary.dart';
 
 class DownloadScheduler {
-  DownloadScheduler(this._store, this._client, {DateTime Function()? now})
-    : _now = now ?? DateTime.now;
+  DownloadScheduler(
+    this._store,
+    this._client,
+    this._aozoraIndexStore,
+    this._aozoraTextClient, {
+    DateTime Function()? now,
+  }) : _now = now ?? DateTime.now;
 
   static const int maxConcurrentScrapes = 2;
   static const int manualSyncPriority = 5000;
@@ -19,6 +26,8 @@ class DownloadScheduler {
 
   final DownloadStore _store;
   final NarouWebClient _client;
+  final AozoraIndexStore _aozoraIndexStore;
+  final AozoraTextClient _aozoraTextClient;
   final DateTime Function() _now;
 
   StreamSubscription<void>? _changesSubscription;
@@ -197,6 +206,27 @@ class DownloadScheduler {
           job.novelId,
           result.downloadPlans,
         );
+      case NovelSite.aozora:
+        final work = await _aozoraIndexStore.findByWorkId(job.novelId);
+        if (work == null) {
+          throw StateError('青空文庫インデックスに作品がありません。');
+        }
+
+        final syncResult = await _store.applyAozoraNovelSync(
+          novelId: work.id,
+          title: work.title,
+          authorName: work.author,
+          summary: work.subtitle,
+          cardUrl: work.cardUrl,
+          textZipUrl: work.textZipUrl,
+          force: job.force,
+          refreshInterval: refreshInterval,
+        );
+        await _store.enqueueEpisodeDownloads(
+          job.site,
+          job.novelId,
+          syncResult.downloadPlans,
+        );
     }
   }
 
@@ -230,6 +260,23 @@ class DownloadScheduler {
           novelId: job.novelId,
           episodeNo: episodeNo,
           page: page,
+          excludingJobId: job.id,
+        );
+      case NovelSite.aozora:
+        final episodeUrl = await _store.episodeUrlFor(
+          job.site,
+          job.novelId,
+          episodeNo,
+        );
+        if (episodeUrl == null || episodeUrl.isEmpty) {
+          throw StateError('青空本文zip URLがありません。');
+        }
+        final textFile = await _aozoraTextClient.fetchText(episodeUrl);
+        await _store.markAozoraEpisodeDownloaded(
+          novelId: job.novelId,
+          episodeNo: episodeNo,
+          title: null,
+          body: textFile.text,
           excludingJobId: job.id,
         );
     }
