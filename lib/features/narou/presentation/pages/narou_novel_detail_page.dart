@@ -23,10 +23,10 @@ class NarouNovelDetailPage extends ConsumerWidget {
       _ => null,
     };
     final savedNovel = ref
-        .watch(savedNovelsProvider)
-        .value
-        ?.where((item) => item.site == NovelSite.narou && item.id == novelId)
-        .firstOrNull;
+        .watch(
+          savedNovelOverviewProvider((site: NovelSite.narou, novelId: novelId)),
+        )
+        .value;
 
     return AppScaffold(
       title: '作品詳細',

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:sqlite3/sqlite3.dart' as sqlite;
 import 'package:yomou/core/database/app_database.dart';
 import 'package:yomou/features/settings/domain/entities/app_settings.dart';
@@ -6,8 +8,10 @@ class SettingsStore {
   SettingsStore(this._database);
 
   final AppDatabase _database;
+  final StreamController<void> _changesController =
+      StreamController<void>.broadcast();
 
-  Stream<void> get changes => _database.changes;
+  Stream<void> get changes => _changesController.stream;
 
   Future<AppSettings> readSettings() async {
     return _database.read((db) {
@@ -64,6 +68,11 @@ class SettingsStore {
         ],
       );
     });
+    _changesController.add(null);
+  }
+
+  Future<void> dispose() async {
+    await _changesController.close();
   }
 
   AppSettings _appSettingsFromRow(sqlite.Row row) {

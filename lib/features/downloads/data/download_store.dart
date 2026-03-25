@@ -168,6 +168,78 @@ class DownloadStore {
     });
   }
 
+  Future<SavedNovelOverview?> getSavedNovelOverview(
+    NovelSite site,
+    String novelId,
+  ) async {
+    return _database.read((db) {
+      final rows = db.select(
+        '''
+        SELECT
+          s.site,
+          s.novel_id,
+          s.title,
+          s.created_at,
+          s.updated_at,
+          s.total_episodes,
+          s.update_locked,
+          s.lock_reason,
+          s.last_error,
+          s.last_checked_at,
+          s.last_synced_at,
+          s.next_refresh_at,
+          COALESCE(b.episode_no, 1) AS resume_episode_no,
+          (
+            SELECT e.episode_url
+            FROM novel_episodes e
+            WHERE e.site = s.site
+              AND e.novel_id = s.novel_id
+              AND e.episode_no = COALESCE(b.episode_no, 1)
+            LIMIT 1
+          ) AS resume_episode_url,
+          COALESCE(b.page_number, 1) AS resume_page_number,
+          COALESCE(b.page_count, 0) AS resume_page_count,
+          MAX(s.total_episodes - COALESCE(b.episode_no, 1) + 1, 0)
+            AS remaining_episodes,
+          (
+            SELECT COUNT(*)
+            FROM novel_episodes e
+            WHERE e.site = s.site
+              AND e.novel_id = s.novel_id
+              AND e.is_downloaded = 1
+          ) AS downloaded_episodes,
+          (
+            SELECT COUNT(*)
+            FROM download_jobs j
+            WHERE j.site = s.site
+              AND j.novel_id = s.novel_id
+              AND j.status = 'queued'
+          ) AS queued_jobs,
+          (
+            SELECT COUNT(*)
+            FROM download_jobs j
+            WHERE j.site = s.site
+              AND j.novel_id = s.novel_id
+              AND j.status = 'running'
+          ) AS running_jobs
+        FROM saved_novels s
+        LEFT JOIN novel_bookmarks b
+          ON b.site = s.site
+         AND b.novel_id = s.novel_id
+        WHERE s.site = ?
+          AND s.novel_id = ?
+        LIMIT 1
+        ''',
+        <Object?>[site.name, novelId],
+      );
+
+      if (rows.isEmpty) {
+        return null;
+      }
+      return _savedNovelOverviewFromRow(rows.first);
+    });
+  }
+
   Future<bool> saveReadingProgress({
     required NovelSite site,
     required String novelId,
@@ -264,7 +336,19 @@ class DownloadStore {
   }) async {
     final savedNovels = await listSavedNovels();
     final recentJobs = await listRecentJobs(limit: recentJobLimit);
-    final counts = await _database.read((db) {
+    final counts = await getJobCounts();
+
+    return DownloadStatusSnapshot(
+      queuedJobs: counts.queuedJobs,
+      runningJobs: counts.runningJobs,
+      failedJobs: counts.failedJobs,
+      savedNovels: savedNovels,
+      recentJobs: recentJobs,
+    );
+  }
+
+  Future<DownloadJobCounts> getJobCounts() async {
+    return _database.read((db) {
       final rows = db.select('''
         SELECT
           SUM(CASE WHEN status = 'queued' THEN 1 ELSE 0 END) AS queued_jobs,
@@ -272,16 +356,13 @@ class DownloadStore {
           SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed_jobs
         FROM download_jobs
       ''');
-      return rows.first;
+      final row = rows.first;
+      return DownloadJobCounts(
+        queuedJobs: _intValue(row['queued_jobs']),
+        runningJobs: _intValue(row['running_jobs']),
+        failedJobs: _intValue(row['failed_jobs']),
+      );
     });
-
-    return DownloadStatusSnapshot(
-      queuedJobs: _intValue(counts['queued_jobs']),
-      runningJobs: _intValue(counts['running_jobs']),
-      failedJobs: _intValue(counts['failed_jobs']),
-      savedNovels: savedNovels,
-      recentJobs: recentJobs,
-    );
   }
 
   Future<List<DownloadJobOverview>> listRecentJobs({int limit = 40}) async {
@@ -714,12 +795,24 @@ class DownloadStore {
         final isDownloaded = existing == null
             ? false
             : _boolValue(existing['is_downloaded']);
+        final normalizedTitle = _normalizeEpisodeMetadataText(metadata.title);
+        final normalizedPublishedAt = _normalizeEpisodeMetadataText(
+          metadata.publishedAt,
+        );
+        final normalizedRevisedAt = _normalizeEpisodeMetadataText(
+          metadata.revisedAt,
+        );
         final needsDownload =
             existing == null ||
             !isDownloaded ||
-            existing['title'] != metadata.title ||
-            existing['published_at'] != metadata.publishedAt ||
-            existing['revised_at'] != metadata.revisedAt;
+            _normalizeEpisodeMetadataText(existing['title'] as String?) !=
+                normalizedTitle ||
+            _normalizeEpisodeMetadataText(
+                  existing['published_at'] as String?,
+                ) !=
+                normalizedPublishedAt ||
+            _normalizeEpisodeMetadataText(existing['revised_at'] as String?) !=
+                normalizedRevisedAt;
 
         if (existing == null) {
           db.execute(
@@ -742,12 +835,12 @@ class DownloadStore {
               site.name,
               novelId,
               metadata.episodeNo,
-              metadata.title,
+              normalizedTitle ?? metadata.title,
               metadata.episodeUrl,
               metadata.chapterTitle,
               metadata.indexPage,
-              metadata.publishedAt,
-              metadata.revisedAt,
+              normalizedPublishedAt,
+              normalizedRevisedAt,
               needsDownload ? 0 : 1,
               now,
             ],
@@ -769,12 +862,12 @@ class DownloadStore {
               AND episode_no = ?
             ''',
             <Object?>[
-              metadata.title,
+              normalizedTitle ?? metadata.title,
               metadata.episodeUrl,
               metadata.chapterTitle,
               metadata.indexPage,
-              metadata.publishedAt,
-              metadata.revisedAt,
+              normalizedPublishedAt,
+              normalizedRevisedAt,
               needsDownload ? 0 : (isDownloaded ? 1 : 0),
               now,
               site.name,
@@ -887,8 +980,7 @@ class DownloadStore {
             last_synced_at = CASE
               WHEN ? > 0 AND ? >= ? AND ? = 0 THEN ?
               ELSE last_synced_at
-            END,
-            updated_at = ?
+            END
         WHERE site = ?
           AND novel_id = ?
         ''',
@@ -897,7 +989,6 @@ class DownloadStore {
           downloadedEpisodes,
           totalEpisodes,
           activeJobs,
-          now,
           now,
           site.name,
           novelId,
@@ -1171,6 +1262,10 @@ class DownloadStore {
     return 3000 - (bookmarkEpisode - episodeNo).abs();
   }
 
+  String? _normalizeEpisodeMetadataText(String? value) {
+    return cleanText(value);
+  }
+
   String _resolveNovelTitle(
     String fallbackTitle,
     NarouInfoPage infoPage,
@@ -1296,4 +1391,16 @@ class SyncNovelApplyResult {
   final bool isLocked;
   final List<EpisodeDownloadPlan> downloadPlans;
   final String? lockReason;
+}
+
+class DownloadJobCounts {
+  const DownloadJobCounts({
+    required this.queuedJobs,
+    required this.runningJobs,
+    required this.failedJobs,
+  });
+
+  final int queuedJobs;
+  final int runningJobs;
+  final int failedJobs;
 }

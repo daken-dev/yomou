@@ -4,7 +4,11 @@ import 'package:yomou/features/settings/data/settings_store.dart';
 import 'package:yomou/features/settings/domain/entities/app_settings.dart';
 
 final settingsStoreProvider = Provider<SettingsStore>((ref) {
-  return SettingsStore(ref.watch(appDatabaseProvider));
+  final store = SettingsStore(ref.watch(appDatabaseProvider));
+  ref.onDispose(() {
+    store.dispose();
+  });
+  return store;
 });
 
 final settingsChangeTickProvider = StreamProvider<int>((ref) async* {
