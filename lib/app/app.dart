@@ -13,7 +13,20 @@ class YomouApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'yomou',
       routerConfig: ref.watch(appRouterProvider),
-      theme: ThemeData(),
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF5B7AA6),
+          brightness: Brightness.light,
+        ),
+        useMaterial3: true,
+      ),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF5B7AA6),
+          brightness: Brightness.dark,
+        ),
+        useMaterial3: true,
+      ),
     );
   }
 }

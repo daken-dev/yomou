@@ -149,7 +149,10 @@ class DownloadScheduler {
     switch (job.site) {
       case NovelSite.narou:
         final infoPage = await _client.fetchInfoPage(job.novelId);
-        final firstTocPage = await _client.fetchTocPage(job.novelId);
+        final firstTocPage = await _client.fetchTocPage(
+          job.novelId,
+          shortStoryInfoPage: infoPage,
+        );
         final tocPages = <NarouTocPage>[firstTocPage];
         var lastChapterTitle = _lastChapterTitle(firstTocPage.entries);
         for (var page = 2; page <= firstTocPage.lastPage; page += 1) {

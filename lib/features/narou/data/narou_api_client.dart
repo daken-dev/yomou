@@ -25,7 +25,7 @@ class NarouApiClient {
       _endpoint,
       queryParameters: <String, Object>{
         'out': 'json',
-        'of': 't-n-w',
+        'of': 't-n-w-s-g-k-ga-l-ah-r-f-e-no',
         'order': _orderForPeriod(period),
         'st': ((page - 1) * pageSize) + 1,
         'lim': pageSize,

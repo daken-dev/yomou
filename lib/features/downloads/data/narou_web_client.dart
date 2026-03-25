@@ -27,16 +27,22 @@ class NarouWebClient {
     String novelId, {
     int page = 1,
     String? inheritedChapterTitle,
+    NarouInfoPage? shortStoryInfoPage,
   }) async {
     final url = buildTocUrl(novelId, page: page);
     final document = await _fetchDocument(url);
     final resolvedInheritedChapterTitle =
         inheritedChapterTitle ??
         (page > 1 ? await _findInheritedChapter(url) : null);
+    final resolvedShortStoryInfoPage =
+        NarouTocPage.looksLikeSingleEpisodeDocument(document)
+        ? (shortStoryInfoPage ?? await fetchInfoPage(novelId))
+        : null;
     return NarouTocPage.fromDocument(
       url: url,
       document: document,
       inheritedChapterTitle: resolvedInheritedChapterTitle,
+      shortStoryInfoPage: resolvedShortStoryInfoPage,
     );
   }
 
@@ -209,6 +215,7 @@ class NarouTocPage {
     required String url,
     required Document document,
     String? inheritedChapterTitle,
+    NarouInfoPage? shortStoryInfoPage,
   }) {
     final pageNumber = parsePageNumber(url);
     final authorLink = document.querySelector('.p-novel__author a');
@@ -217,6 +224,7 @@ class NarouTocPage {
         document.querySelector('.p-novel__summary');
     final pagerLast = document.querySelector('.c-pager__item--last');
     final eplist = document.querySelector('.p-eplist');
+    final hasBody = document.querySelector('.p-novel__body') != null;
 
     final entries = <NarouTocEntry>[];
     var insertedInheritedChapter = false;
@@ -254,21 +262,42 @@ class NarouTocPage {
       }
     }
 
+    if (entries.isEmpty && hasBody) {
+      final title = elementText(document.querySelector('.p-novel__title'));
+      entries.add(
+        NarouTocEntry.episode(
+          episodeNo: 1,
+          title: title ?? shortStoryInfoPage?.title ?? '',
+          url: url,
+          indexPage: pageNumber,
+          publishedAt: shortStoryInfoPage?.fields['掲載日'],
+          revisedAt: shortStoryInfoPage?.fields['最終更新日'],
+        ),
+      );
+    }
+
     return NarouTocPage(
       url: url,
       page: pageNumber,
       title: elementText(document.querySelector('.p-novel__title')),
-      authorName: elementText(authorLink),
-      authorUrl: absoluteUrl(authorLink?.attributes['href']),
-      summary: blockText(summaryElement),
+      authorName: elementText(authorLink) ?? shortStoryInfoPage?.authorName,
+      authorUrl:
+          absoluteUrl(authorLink?.attributes['href']) ??
+          shortStoryInfoPage?.authorUrl,
+      summary: blockText(summaryElement) ?? shortStoryInfoPage?.fields['あらすじ'],
       summaryHtml: summaryElement?.innerHtml,
-      latestEpisodePublished: elementText(
-        document.querySelector('.p-novel__date-published'),
-      ),
+      latestEpisodePublished:
+          elementText(document.querySelector('.p-novel__date-published')) ??
+          shortStoryInfoPage?.fields['掲載日'],
       lastPage: parseLastPageNumber(document, url),
       lastPageUrl: absoluteUrl(pagerLast?.attributes['href'], url),
       entries: entries,
     );
+  }
+
+  static bool looksLikeSingleEpisodeDocument(Document document) {
+    return document.querySelector('.p-eplist') == null &&
+        document.querySelector('.p-novel__body') != null;
   }
 
   final String url;
@@ -463,28 +492,43 @@ class NarouEpisodePage {
     final announceLinks = announce?.querySelectorAll('a') ?? const <Element>[];
     final novelLink = announceLinks.isNotEmpty ? announceLinks[0] : null;
     final authorLink = announceLinks.length > 1 ? announceLinks[1] : null;
+    final fallbackAuthorLink = document.querySelector('.p-novel__author a');
 
     final sections = findBodySections(document);
     final number = elementText(document.querySelector('.p-novel__number'));
-    final sequenceMatch = RegExp(r'(\d+)\s*/\s*(\d+)').firstMatch(number ?? '');
+    final pageTitle = elementText(document.querySelector('.p-novel__title'));
+    final isSingleEpisode =
+        number == null &&
+        navigation['prev'] == null &&
+        navigation['next'] == null &&
+        sections.body != null;
+    final resolvedSequence = number ?? (isSingleEpisode ? '1 / 1' : null);
+    final sequenceMatch = RegExp(
+      r'(\d+)\s*/\s*(\d+)',
+    ).firstMatch(resolvedSequence ?? '');
 
     return NarouEpisodePage(
       url: url,
-      novelTitle: elementText(novelLink),
-      novelUrl: absoluteUrl(novelLink?.attributes['href'], url),
-      authorName: elementText(authorLink),
-      authorUrl: absoluteUrl(authorLink?.attributes['href'], url),
-      sequence: number,
+      novelTitle: elementText(novelLink) ?? pageTitle,
+      novelUrl:
+          absoluteUrl(novelLink?.attributes['href'], url) ??
+          (isSingleEpisode ? url : null),
+      authorName: elementText(authorLink ?? fallbackAuthorLink),
+      authorUrl: absoluteUrl(
+        (authorLink ?? fallbackAuthorLink)?.attributes['href'],
+        url,
+      ),
+      sequence: resolvedSequence,
       sequenceCurrent: int.tryParse(sequenceMatch?.group(1) ?? ''),
       sequenceTotal: int.tryParse(sequenceMatch?.group(2) ?? ''),
-      title: elementText(document.querySelector('.p-novel__title')),
+      title: pageTitle,
       preface: blockText(sections.preface),
       prefaceHtml: sections.preface?.innerHtml,
       body: blockText(sections.body),
       bodyHtml: sections.body?.innerHtml,
       afterword: blockText(sections.afterword),
       afterwordHtml: sections.afterword?.innerHtml,
-      tocUrl: navigation['toc'],
+      tocUrl: navigation['toc'] ?? (isSingleEpisode ? url : null),
       prevUrl: navigation['prev'],
       nextUrl: navigation['next'],
     );

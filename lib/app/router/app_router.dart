@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:yomou/features/common/presentation/pages/simple_text_page.dart';
 import 'package:yomou/features/downloads/presentation/pages/download_status_page.dart';
 import 'package:yomou/features/home/presentation/pages/home_page.dart';
+import 'package:yomou/features/narou/presentation/pages/narou_episode_reader_page.dart';
 import 'package:yomou/features/narou/presentation/pages/narou_novel_detail_page.dart';
 import 'package:yomou/features/novels/domain/entities/novel_ranking_period.dart';
 import 'package:yomou/features/novels/domain/entities/novel_site.dart';
@@ -26,6 +27,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/narou/novel/:id',
         builder: (context, state) =>
             NarouNovelDetailPage(novelId: state.pathParameters['id'] ?? ''),
+      ),
+      GoRoute(
+        path: '/narou/novel/:id/episode/:episodeNo',
+        builder: (context, state) => NarouEpisodeReaderPage(
+          novelId: state.pathParameters['id'] ?? '',
+          episodeNo: int.tryParse(state.pathParameters['episodeNo'] ?? '') ?? 1,
+          episodeUrl: state.uri.queryParameters['url'],
+        ),
       ),
       GoRoute(
         path: '/narou/search',

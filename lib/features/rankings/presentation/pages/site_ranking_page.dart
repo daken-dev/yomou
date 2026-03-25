@@ -14,31 +14,52 @@ class SiteRankingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return AppScaffold(
-      title: 'ランキング',
+      title: period.displayName,
       body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final value in NovelRankingPeriodX.selectableValues)
-                  ChoiceChip(
-                    label: Text(value.label),
-                    selected: value == period,
-                    onSelected: (_) =>
-                        context.go('/narou/ranking?period=${value.queryValue}'),
-                  ),
-              ],
+          // Period selector
+          Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerLow,
+              border: Border(
+                bottom: BorderSide(
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                ),
+              ),
+            ),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(
+                children: [
+                  for (final value in NovelRankingPeriodX.selectableValues)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: ChoiceChip(
+                        label: Text(value.label),
+                        selected: value == period,
+                        onSelected: (_) => context
+                            .go('/narou/ranking?period=${value.queryValue}'),
+                        showCheckmark: false,
+                        labelStyle: TextStyle(
+                          fontSize: 13,
+                          fontWeight: value == period
+                              ? FontWeight.w600
+                              : FontWeight.w400,
+                        ),
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Text('${site.displayName} ${period.displayName}'),
-          ),
+          // Feed
           Expanded(
             child: RankingFeedList(
               args: RankingFeedArgs(site: site, period: period),

@@ -85,6 +85,7 @@ class NarouNovelDetailController extends AsyncNotifier<NarouNovelDetailState> {
             NarouTocEntryType.episode => NarouNovelDetailListItem.episode(
               title: entry.title ?? '',
               episodeNo: entry.episodeNo,
+              episodeUrl: entry.url,
             ),
           };
         })
@@ -153,16 +154,19 @@ class NarouNovelDetailState {
 class NarouNovelDetailListItem {
   const NarouNovelDetailListItem.chapter({required this.title})
     : type = NarouNovelDetailListItemType.chapter,
-      episodeNo = null;
+      episodeNo = null,
+      episodeUrl = null;
 
   const NarouNovelDetailListItem.episode({
     required this.title,
     required this.episodeNo,
+    required this.episodeUrl,
   }) : type = NarouNovelDetailListItemType.episode;
 
   final NarouNovelDetailListItemType type;
   final String title;
   final int? episodeNo;
+  final String? episodeUrl;
 
   bool get isChapter => type == NarouNovelDetailListItemType.chapter;
 }

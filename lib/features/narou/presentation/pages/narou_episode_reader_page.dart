@@ -1,0 +1,395 @@
+import 'dart:async';
+import 'dart:ui' as ui;
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:kumihan/kumihan.dart';
+import 'package:yomou/features/narou/application/narou_episode_reader_controller.dart';
+import 'package:yomou/features/narou/data/narou_episode_image_cache.dart';
+
+class NarouEpisodeReaderPage extends ConsumerStatefulWidget {
+  const NarouEpisodeReaderPage({
+    super.key,
+    required this.novelId,
+    required this.episodeNo,
+    this.episodeUrl,
+  });
+
+  final String novelId;
+  final int episodeNo;
+  final String? episodeUrl;
+
+  @override
+  ConsumerState<NarouEpisodeReaderPage> createState() =>
+      _NarouEpisodeReaderPageState();
+}
+
+class _NarouEpisodeReaderPageState
+    extends ConsumerState<NarouEpisodeReaderPage> {
+  final KumihanController _kumihanController = KumihanController();
+
+  late int _currentEpisodeNo;
+  late String? _currentEpisodeUrl;
+  var _controlsVisible = false;
+  var _nextStartPosition = _EpisodeStartPosition.firstPage;
+  NarouEpisodeReaderData? _latestData;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentEpisodeNo = widget.episodeNo;
+    _currentEpisodeUrl = widget.episodeUrl;
+    _applyFullscreenMode();
+  }
+
+  @override
+  void dispose() {
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final request = NarouEpisodeReaderRequest(
+      novelId: widget.novelId,
+      episodeNo: _currentEpisodeNo,
+      episodeUrl: _currentEpisodeUrl,
+    );
+    final episodeAsync = ref.watch(narouEpisodeReaderProvider(request));
+    final imageLoader = ref.watch(narouEpisodeImageCacheProvider).loadImage;
+    final snapshot = _kumihanController.snapshot;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF6F0DF),
+      body: switch (episodeAsync) {
+        AsyncData(:final value) => _buildReader(
+          context,
+          data: value,
+          imageLoader: imageLoader,
+          snapshot: snapshot,
+        ),
+        AsyncError(:final error) => _buildError(context, error, request),
+        _ => const Center(child: CircularProgressIndicator()),
+      },
+    );
+  }
+
+  Widget _buildReader(
+    BuildContext context, {
+    required NarouEpisodeReaderData data,
+    required Future<ui.Image?> Function(String) imageLoader,
+    required KumihanSnapshot snapshot,
+  }) {
+    _latestData = data;
+    if (_nextStartPosition == _EpisodeStartPosition.lastPage) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) {
+          return;
+        }
+        _nextStartPosition = _EpisodeStartPosition.firstPage;
+        unawaited(_kumihanController.showLastPage());
+      });
+    }
+
+    final pageTitle = data.page.title ?? '本文';
+    final novelTitle = data.page.novelTitle ?? widget.novelId;
+    final pageLabel = snapshot.totalPages > 0
+        ? '${snapshot.currentPage + 1} / ${snapshot.totalPages}'
+        : '0 / 0';
+    final episodeLabel =
+        data.page.sequenceCurrent != null && data.page.sequenceTotal != null
+        ? '${data.page.sequenceCurrent} / ${data.page.sequenceTotal}'
+        : null;
+
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: KumihanCanvas(
+            key: ValueKey<String>(
+              '${widget.novelId}:$_currentEpisodeNo:${_currentEpisodeUrl ?? ''}',
+            ),
+            controller: _kumihanController,
+            document: data.document,
+            imageLoader: imageLoader,
+            initialSpread: KumihanSpreadMode.single,
+            initialWritingMode: KumihanWritingMode.vertical,
+            layout: const KumihanLayoutData(
+              fontSize: 20,
+              pageMarginScale: 0.82,
+            ),
+            theme: const KumihanThemeData(
+              paperColor: Color(0xFFF6F0DF),
+              textColor: Color(0xFF2A241C),
+            ),
+            tapHandler: _handleTap,
+          ),
+        ),
+        Positioned.fill(
+          child: IgnorePointer(
+            ignoring: !_controlsVisible,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 160),
+              opacity: _controlsVisible ? 1 : 0,
+              child: ColoredBox(
+                color: Colors.black.withValues(alpha: 0.14),
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: _toggleControls,
+                  child: SafeArea(
+                    child: Stack(
+                      children: [
+                        Align(
+                          alignment: Alignment.topCenter,
+                          child: Container(
+                            margin: const EdgeInsets.all(16),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.55),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Row(
+                              children: [
+                                IconButton(
+                                  onPressed: () => context.pop(),
+                                  icon: const Icon(
+                                    Icons.arrow_back,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        novelTitle,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                      Text(
+                                        pageTitle,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  pageLabel,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        Align(
+                          alignment: Alignment.bottomCenter,
+                          child: Container(
+                            margin: const EdgeInsets.all(16),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.55),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: TextButton.icon(
+                                    onPressed: data.previousEpisodeNo == null
+                                        ? null
+                                        : () => _openEpisode(
+                                            episodeNo: data.previousEpisodeNo!,
+                                            episodeUrl: data.page.prevUrl,
+                                            startPosition:
+                                                _EpisodeStartPosition.lastPage,
+                                          ),
+                                    icon: const Icon(Icons.skip_previous),
+                                    label: const Text('前の話'),
+                                  ),
+                                ),
+                                if (episodeLabel != null)
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                    ),
+                                    child: Text(
+                                      episodeLabel,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                Expanded(
+                                  child: TextButton.icon(
+                                    onPressed: data.nextEpisodeNo == null
+                                        ? null
+                                        : () => _openEpisode(
+                                            episodeNo: data.nextEpisodeNo!,
+                                            episodeUrl: data.page.nextUrl,
+                                            startPosition:
+                                                _EpisodeStartPosition.firstPage,
+                                          ),
+                                    icon: const Icon(Icons.skip_next),
+                                    label: const Text('次の話'),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildError(
+    BuildContext context,
+    Object error,
+    NarouEpisodeReaderRequest request,
+  ) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('本文の取得に失敗しました。'),
+            const SizedBox(height: 12),
+            Text(error.toString(), textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 12,
+              children: [
+                FilledButton(
+                  onPressed: () =>
+                      ref.invalidate(narouEpisodeReaderProvider(request)),
+                  child: const Text('再試行'),
+                ),
+                TextButton(
+                  onPressed: () => context.pop(),
+                  child: const Text('戻る'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleTap(
+    KumihanTapDetails details,
+    KumihanTapActions actions,
+  ) async {
+    final x = details.normalizedX;
+    if (x <= 1 / 3) {
+      await _handleSideTap(details, actions, KumihanTapSide.left);
+      return;
+    }
+    if (x >= 2 / 3) {
+      await _handleSideTap(details, actions, KumihanTapSide.right);
+      return;
+    }
+    _toggleControls();
+  }
+
+  Future<void> _handleSideTap(
+    KumihanTapDetails details,
+    KumihanTapActions actions,
+    KumihanTapSide side,
+  ) async {
+    final data = _latestData;
+    final isForward = switch (details.snapshot.writingMode) {
+      KumihanWritingMode.vertical => side == KumihanTapSide.left,
+      KumihanWritingMode.horizontal => side == KumihanTapSide.right,
+    };
+    final isAtEdge = isForward
+        ? details.snapshot.currentPage >= details.snapshot.totalPages - 1
+        : details.snapshot.currentPage <= 0;
+
+    if (data != null && isAtEdge) {
+      if (isForward && data.nextEpisodeNo != null) {
+        _openEpisode(
+          episodeNo: data.nextEpisodeNo!,
+          episodeUrl: data.page.nextUrl,
+          startPosition: _EpisodeStartPosition.firstPage,
+        );
+        return;
+      }
+      if (!isForward && data.previousEpisodeNo != null) {
+        _openEpisode(
+          episodeNo: data.previousEpisodeNo!,
+          episodeUrl: data.page.prevUrl,
+          startPosition: _EpisodeStartPosition.lastPage,
+        );
+        return;
+      }
+    }
+
+    await actions.pageTurnFromSide(side, details.snapshot);
+  }
+
+  void _openEpisode({
+    required int episodeNo,
+    required String? episodeUrl,
+    required _EpisodeStartPosition startPosition,
+  }) {
+    setState(() {
+      _currentEpisodeNo = episodeNo;
+      _currentEpisodeUrl = episodeUrl;
+      _controlsVisible = false;
+      _nextStartPosition = startPosition;
+      _latestData = null;
+    });
+    _applyFullscreenMode();
+  }
+
+  void _toggleControls() {
+    setState(() {
+      _controlsVisible = !_controlsVisible;
+    });
+    _applyFullscreenMode();
+  }
+
+  void _applyFullscreenMode() {
+    final mode = _controlsVisible
+        ? SystemUiMode.edgeToEdge
+        : SystemUiMode.immersiveSticky;
+    SystemChrome.setEnabledSystemUIMode(mode);
+  }
+}
+
+enum _EpisodeStartPosition { firstPage, lastPage }

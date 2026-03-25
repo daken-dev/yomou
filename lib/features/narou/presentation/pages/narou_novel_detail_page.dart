@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:yomou/features/narou/application/narou_novel_detail_controller.dart';
 import 'package:yomou/features/navigation/presentation/widgets/app_scaffold.dart';
 
@@ -61,7 +62,22 @@ class NarouNovelDetailPage extends ConsumerWidget {
                 final itemIndex = index - 1;
                 if (itemIndex < state.items.length) {
                   final item = state.items[itemIndex];
-                  return ListTile(title: Text(item.title));
+                  return ListTile(
+                    title: Text(item.title),
+                    enabled: !item.isChapter && item.episodeNo != null,
+                    onTap: item.isChapter || item.episodeNo == null
+                        ? null
+                        : () {
+                            final location = Uri(
+                              path:
+                                  '/narou/novel/$novelId/episode/${item.episodeNo}',
+                              queryParameters: item.episodeUrl == null
+                                  ? null
+                                  : <String, String>{'url': item.episodeUrl!},
+                            );
+                            context.push(location.toString());
+                          },
+                  );
                 }
 
                 if (state.loadMoreErrorMessage case final message?) {
