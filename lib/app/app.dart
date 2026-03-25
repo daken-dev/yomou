@@ -21,6 +21,7 @@ class YomouApp extends ConsumerWidget {
       title: 'よもう',
       routerConfig: ref.watch(appRouterProvider),
       themeMode: settings.themeMode.themeMode,
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF5B7AA6),

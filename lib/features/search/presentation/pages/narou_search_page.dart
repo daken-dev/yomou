@@ -39,7 +39,7 @@ class _NarouSearchPageState extends State<NarouSearchPage> {
     return AppScaffold(
       title: '検索',
       body: GestureDetector(
-        onTap: () => FocusScope.of(context).unfocus(),
+        onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
         behavior: HitTestBehavior.opaque,
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
@@ -173,7 +173,7 @@ class _NarouSearchPageState extends State<NarouSearchPage> {
   }
 
   void _submit() {
-    FocusScope.of(context).unfocus();
+    FocusManager.instance.primaryFocus?.unfocus();
 
     final request = NovelSearchRequest(
       site: NovelSite.narou,

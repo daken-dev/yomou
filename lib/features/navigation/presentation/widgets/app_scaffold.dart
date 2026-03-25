@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:yomou/features/navigation/presentation/widgets/app_drawer.dart';
 
 class AppScaffold extends StatelessWidget {
@@ -17,13 +18,18 @@ class AppScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final canPop = Navigator.canPop(context);
+    final canPop = context.canPop();
     return Scaffold(
       appBar: AppBar(
         leading: canPop
             ? IconButton(
                 icon: const Icon(Icons.arrow_back),
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () {
+                  FocusManager.instance.primaryFocus?.unfocus();
+                  if (context.canPop()) {
+                    context.pop();
+                  }
+                },
               )
             : null,
         title: Text(title),
