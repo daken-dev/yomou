@@ -1,4 +1,4 @@
-package com.example.yomou
+package io.qzz.daken.yomou
 
 import io.flutter.embedding.android.FlutterActivity
 

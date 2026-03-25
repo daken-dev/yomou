@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:yomou/features/downloads/application/download_providers.dart';
 import 'package:yomou/features/downloads/presentation/widgets/download_summary_widgets.dart';
 import 'package:yomou/features/navigation/presentation/widgets/app_scaffold.dart';
+import 'package:yomou/features/novels/domain/entities/novel_site.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -25,6 +27,7 @@ class HomePage extends ConsumerWidget {
                     for (final item in items)
                       SavedNovelTile(
                         novel: item,
+                        onTap: () => context.push(_savedNovelLocation(item.site, item.id)),
                         onRefresh: () => ref
                             .read(downloadSchedulerProvider)
                             .refreshNovel(item.site, item.id),
@@ -40,5 +43,11 @@ class HomePage extends ConsumerWidget {
         _ => const Center(child: Text('Loading...')),
       },
     );
+  }
+
+  String _savedNovelLocation(NovelSite site, String novelId) {
+    return switch (site) {
+      NovelSite.narou => '/narou/novel/$novelId',
+    };
   }
 }

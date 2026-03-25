@@ -7,10 +7,12 @@ class SavedNovelTile extends StatelessWidget {
     super.key,
     required this.novel,
     required this.onRefresh,
+    this.onTap,
   });
 
   final SavedNovelOverview novel;
   final VoidCallback onRefresh;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -28,6 +30,7 @@ class SavedNovelTile extends StatelessWidget {
     ];
 
     return ListTile(
+      onTap: onTap,
       title: Text(novel.title),
       subtitle: Text(subtitle.join('\n')),
       trailing: TextButton(onPressed: onRefresh, child: const Text('更新')),
