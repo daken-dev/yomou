@@ -10,6 +10,7 @@ import 'package:yomou/features/downloads/application/download_providers.dart';
 import 'package:yomou/features/narou/application/narou_episode_reader_controller.dart';
 import 'package:yomou/features/narou/data/narou_kumihan_parser.dart';
 import 'package:yomou/features/narou/data/narou_episode_image_cache.dart';
+import 'package:yomou/features/narou/presentation/reader_navigation.dart';
 import 'package:yomou/features/novels/domain/entities/novel_site.dart';
 import 'package:yomou/features/settings/application/settings_providers.dart';
 import 'package:yomou/features/settings/domain/entities/app_settings.dart';
@@ -376,13 +377,15 @@ class _NarouEpisodeReaderPageState
     KumihanTapSide side,
   ) async {
     final data = _latestData;
-    final isForward = switch (details.snapshot.writingMode) {
+    final snapshot = details.snapshot;
+    final isForward = switch (snapshot.writingMode) {
       KumihanWritingMode.vertical => side == KumihanTapSide.left,
       KumihanWritingMode.horizontal => side == KumihanTapSide.right,
     };
-    final isAtEdge = isForward
-        ? details.snapshot.currentPage >= details.snapshot.totalPages - 1
-        : details.snapshot.currentPage <= 0;
+    final isAtEdge = isAtReaderTurnEdge(
+      snapshot: snapshot,
+      isForward: isForward,
+    );
 
     if (data != null && isAtEdge) {
       if (isForward && data.nextEpisodeNo != null) {
@@ -407,7 +410,7 @@ class _NarouEpisodeReaderPageState
       }
     }
 
-    await actions.pageTurnFromSide(side, details.snapshot);
+    await actions.pageTurnFromSide(side, snapshot);
   }
 
   void _openEpisode({
