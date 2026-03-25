@@ -707,7 +707,6 @@ class DownloadStore {
             ? false
             : _boolValue(existing['is_downloaded']);
         final needsDownload =
-            force ||
             existing == null ||
             !isDownloaded ||
             existing['title'] != metadata.title ||

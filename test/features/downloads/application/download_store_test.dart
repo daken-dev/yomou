@@ -149,6 +149,119 @@ void main() {
   });
 
   test(
+    'applyNovelSync force refresh does not redownload unchanged episodes',
+    () async {
+      final database = AppDatabase(pathProvider: () async => ':memory:');
+      addTearDown(database.dispose);
+
+      final fixedNow = DateTime.utc(2026, 3, 25, 0, 0, 0);
+      final store = DownloadStore(database, now: () => fixedNow);
+      const novel = NovelSummary(
+        site: NovelSite.narou,
+        id: 'N0001AA',
+        title: '作品1',
+      );
+      const infoPage = NarouInfoPage(
+        url: 'https://ncode.syosetu.com/novelview/infotop/ncode/n0001aa/',
+        title: '作品1',
+        authorUrl: 'https://example.com/authors/1',
+        fields: <String, String>{'作者名': '作者1'},
+        kasasagiUrl: null,
+        workUrl: null,
+        qrcodeUrl: null,
+      );
+      final tocPages = <NarouTocPage>[
+        NarouTocPage(
+          url: 'https://ncode.syosetu.com/n0001aa/',
+          page: 1,
+          title: '作品1',
+          authorName: '作者1',
+          authorUrl: 'https://example.com/authors/1',
+          summary: 'あらすじ',
+          summaryHtml: '<p>あらすじ</p>',
+          latestEpisodePublished: '2026/03/25',
+          lastPage: 1,
+          lastPageUrl: null,
+          entries: <NarouTocEntry>[
+            NarouTocEntry.episode(
+              episodeNo: 1,
+              title: '1話',
+              url: 'https://ncode.syosetu.com/n0001aa/1/',
+              indexPage: 1,
+            ),
+            NarouTocEntry.episode(
+              episodeNo: 2,
+              title: '2話',
+              url: 'https://ncode.syosetu.com/n0001aa/2/',
+              indexPage: 1,
+            ),
+          ],
+        ),
+      ];
+
+      await store.saveNovel(novel);
+
+      final firstResult = await store.applyNovelSync(
+        site: novel.site,
+        novelId: novel.id,
+        fallbackTitle: novel.title,
+        infoPage: infoPage,
+        tocPages: tocPages,
+        force: false,
+        refreshInterval: const Duration(hours: 1),
+      );
+
+      expect(firstResult.downloadPlans.map((plan) => plan.episodeNo), [1, 2]);
+
+      for (final plan in firstResult.downloadPlans) {
+        await store.markEpisodeDownloaded(
+          site: novel.site,
+          novelId: novel.id,
+          episodeNo: plan.episodeNo,
+          page: NarouEpisodePage(
+            url: 'https://ncode.syosetu.com/n0001aa/${plan.episodeNo}/',
+            novelTitle: novel.title,
+            novelUrl: 'https://ncode.syosetu.com/n0001aa/',
+            authorName: '作者1',
+            authorUrl: 'https://example.com/authors/1',
+            sequence: '${plan.episodeNo} / 2',
+            sequenceCurrent: plan.episodeNo,
+            sequenceTotal: 2,
+            title: '${plan.episodeNo}話',
+            preface: null,
+            prefaceHtml: null,
+            body: '本文',
+            bodyHtml: '<p>本文</p>',
+            afterword: null,
+            afterwordHtml: null,
+            tocUrl: 'https://ncode.syosetu.com/n0001aa/',
+            prevUrl: null,
+            nextUrl: null,
+          ),
+          excludingJobId: -1,
+        );
+      }
+
+      final forceResult = await store.applyNovelSync(
+        site: novel.site,
+        novelId: novel.id,
+        fallbackTitle: novel.title,
+        infoPage: infoPage,
+        tocPages: tocPages,
+        force: true,
+        refreshInterval: const Duration(hours: 1),
+      );
+
+      expect(forceResult.isLocked, isFalse);
+      expect(forceResult.downloadPlans, isEmpty);
+
+      final overview = (await store.listSavedNovels()).single;
+      expect(overview.downloadedEpisodes, 2);
+      expect(overview.state, SavedNovelSyncState.synced);
+    },
+  );
+
+  test(
     'saveReadingProgress stores resume page and remaining episodes',
     () async {
       final database = AppDatabase(pathProvider: () async => ':memory:');
