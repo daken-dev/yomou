@@ -105,7 +105,11 @@ class AppDatabase {
       _migrateToV3(database);
     }
 
-    database.execute('PRAGMA user_version = 3');
+    if (currentVersion < 4) {
+      _migrateToV4(database);
+    }
+
+    database.execute('PRAGMA user_version = 4');
   }
 
   void _createSchema(sqlite.Database database) {
@@ -226,6 +230,7 @@ class AppDatabase {
         theme_mode TEXT NOT NULL DEFAULT 'system',
         open_home_novel_directly_in_reader INTEGER NOT NULL DEFAULT 1,
         reader_writing_mode TEXT NOT NULL DEFAULT 'vertical',
+        reader_tap_pattern TEXT NOT NULL DEFAULT 'left_center_right',
         reader_use_paper_texture INTEGER NOT NULL DEFAULT 1,
         reader_paper_color TEXT NOT NULL DEFAULT 'washi',
         reader_font_size REAL NOT NULL DEFAULT 20,
@@ -255,6 +260,7 @@ class AppDatabase {
         theme_mode TEXT NOT NULL DEFAULT 'system',
         open_home_novel_directly_in_reader INTEGER NOT NULL DEFAULT 1,
         reader_writing_mode TEXT NOT NULL DEFAULT 'vertical',
+        reader_tap_pattern TEXT NOT NULL DEFAULT 'left_center_right',
         reader_use_paper_texture INTEGER NOT NULL DEFAULT 1,
         reader_paper_color TEXT NOT NULL DEFAULT 'washi',
         reader_font_size REAL NOT NULL DEFAULT 20,
@@ -263,6 +269,13 @@ class AppDatabase {
         reader_show_preface INTEGER NOT NULL DEFAULT 1,
         reader_show_afterword INTEGER NOT NULL DEFAULT 1
       )
+    ''');
+  }
+
+  void _migrateToV4(sqlite.Database database) {
+    database.execute('''
+      ALTER TABLE app_settings
+      ADD COLUMN reader_tap_pattern TEXT NOT NULL DEFAULT 'left_center_right'
     ''');
   }
 }

@@ -97,9 +97,35 @@ extension ReaderPaperColorPresetX on ReaderPaperColorPreset {
   }
 }
 
+enum ReaderTapPattern { leftCenterRight, topCenterBottom }
+
+extension ReaderTapPatternX on ReaderTapPattern {
+  String get storageValue {
+    return switch (this) {
+      ReaderTapPattern.leftCenterRight => 'left_center_right',
+      ReaderTapPattern.topCenterBottom => 'top_center_bottom',
+    };
+  }
+
+  String get label {
+    return switch (this) {
+      ReaderTapPattern.leftCenterRight => '左中右',
+      ReaderTapPattern.topCenterBottom => '上中下',
+    };
+  }
+
+  static ReaderTapPattern fromStorageValue(String? value) {
+    return switch (value) {
+      'top_center_bottom' => ReaderTapPattern.topCenterBottom,
+      _ => ReaderTapPattern.leftCenterRight,
+    };
+  }
+}
+
 class ReaderSettings {
   const ReaderSettings({
     required this.writingMode,
+    required this.tapPattern,
     required this.usePaperTexture,
     required this.paperColorPreset,
     required this.fontSize,
@@ -111,6 +137,7 @@ class ReaderSettings {
 
   const ReaderSettings.defaults()
     : writingMode = ReaderWritingMode.vertical,
+      tapPattern = ReaderTapPattern.leftCenterRight,
       usePaperTexture = true,
       paperColorPreset = ReaderPaperColorPreset.washi,
       fontSize = 20,
@@ -120,6 +147,7 @@ class ReaderSettings {
       showAfterword = true;
 
   final ReaderWritingMode writingMode;
+  final ReaderTapPattern tapPattern;
   final bool usePaperTexture;
   final ReaderPaperColorPreset paperColorPreset;
   final double fontSize;
@@ -177,6 +205,7 @@ class ReaderSettings {
 
   ReaderSettings copyWith({
     ReaderWritingMode? writingMode,
+    ReaderTapPattern? tapPattern,
     bool? usePaperTexture,
     ReaderPaperColorPreset? paperColorPreset,
     double? fontSize,
@@ -187,6 +216,7 @@ class ReaderSettings {
   }) {
     return ReaderSettings(
       writingMode: writingMode ?? this.writingMode,
+      tapPattern: tapPattern ?? this.tapPattern,
       usePaperTexture: usePaperTexture ?? this.usePaperTexture,
       paperColorPreset: paperColorPreset ?? this.paperColorPreset,
       fontSize: fontSize ?? this.fontSize,

@@ -1,4 +1,30 @@
 import 'package:kumihan/kumihan.dart';
+import 'package:yomou/features/settings/domain/entities/app_settings.dart';
+
+enum ReaderTapAction { backward, toggleControls, forward }
+
+ReaderTapAction resolveReaderTapAction({
+  required ReaderTapPattern pattern,
+  required double normalizedX,
+  required double normalizedY,
+}) {
+  return switch (pattern) {
+    ReaderTapPattern.leftCenterRight => _resolveTapActionFromAxis(normalizedX),
+    ReaderTapPattern.topCenterBottom => _resolveTapActionFromAxis(normalizedY),
+  };
+}
+
+KumihanTapSide tapSideForDirection({
+  required KumihanSnapshot snapshot,
+  required bool isForward,
+}) {
+  return switch (snapshot.writingMode) {
+    KumihanWritingMode.vertical =>
+      isForward ? KumihanTapSide.left : KumihanTapSide.right,
+    KumihanWritingMode.horizontal =>
+      isForward ? KumihanTapSide.right : KumihanTapSide.left,
+  };
+}
 
 bool isAtReaderTurnEdge({
   required KumihanSnapshot snapshot,
@@ -18,4 +44,14 @@ bool isAtReaderTurnEdge({
   };
   final lastTurnStart = (snapshot.totalPages - turnAmount).clamp(0, 1 << 30);
   return snapshot.currentPage >= lastTurnStart;
+}
+
+ReaderTapAction _resolveTapActionFromAxis(double value) {
+  if (value <= 1 / 3) {
+    return ReaderTapAction.backward;
+  }
+  if (value >= 2 / 3) {
+    return ReaderTapAction.forward;
+  }
+  return ReaderTapAction.toggleControls;
 }

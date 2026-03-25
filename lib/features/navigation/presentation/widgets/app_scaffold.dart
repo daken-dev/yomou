@@ -17,9 +17,19 @@ class AppScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final canPop = Navigator.canPop(context);
     return Scaffold(
-      appBar: AppBar(title: Text(title), actions: actions),
-      drawer: const AppDrawer(),
+      appBar: AppBar(
+        leading: canPop
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null,
+        title: Text(title),
+        actions: actions,
+      ),
+      drawer: canPop ? null : const AppDrawer(),
       body: SafeArea(child: body),
       floatingActionButton: floatingActionButton,
     );

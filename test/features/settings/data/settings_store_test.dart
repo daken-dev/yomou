@@ -14,6 +14,7 @@ void main() {
     expect(settings.themeMode, AppThemeMode.system);
     expect(settings.openHomeNovelDirectlyInReader, isTrue);
     expect(settings.reader.writingMode, ReaderWritingMode.vertical);
+    expect(settings.reader.tapPattern, ReaderTapPattern.leftCenterRight);
     expect(settings.reader.usePaperTexture, isTrue);
     expect(settings.reader.paperColorPreset, ReaderPaperColorPreset.washi);
     expect(settings.reader.showPreface, isTrue);
@@ -30,6 +31,7 @@ void main() {
       openHomeNovelDirectlyInReader: false,
       reader: const ReaderSettings.defaults().copyWith(
         writingMode: ReaderWritingMode.horizontal,
+        tapPattern: ReaderTapPattern.topCenterBottom,
         usePaperTexture: false,
         paperColorPreset: ReaderPaperColorPreset.dark,
         fontSize: 24,
@@ -39,14 +41,13 @@ void main() {
         showAfterword: false,
       ),
     );
-    await store.saveSettings(
-      settingsToSave,
-    );
+    await store.saveSettings(settingsToSave);
 
     final settings = await store.readSettings();
     expect(settings.themeMode, AppThemeMode.dark);
     expect(settings.openHomeNovelDirectlyInReader, isFalse);
     expect(settings.reader.writingMode, ReaderWritingMode.horizontal);
+    expect(settings.reader.tapPattern, ReaderTapPattern.topCenterBottom);
     expect(settings.reader.usePaperTexture, isFalse);
     expect(settings.reader.paperColorPreset, ReaderPaperColorPreset.dark);
     expect(settings.reader.fontSize, 24);

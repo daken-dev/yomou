@@ -32,6 +32,7 @@ class SettingsStore {
           theme_mode,
           open_home_novel_directly_in_reader,
           reader_writing_mode,
+          reader_tap_pattern,
           reader_use_paper_texture,
           reader_paper_color,
           reader_font_size,
@@ -39,12 +40,13 @@ class SettingsStore {
           reader_landscape_double_page,
           reader_show_preface,
           reader_show_afterword
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           theme_mode = excluded.theme_mode,
           open_home_novel_directly_in_reader =
               excluded.open_home_novel_directly_in_reader,
           reader_writing_mode = excluded.reader_writing_mode,
+          reader_tap_pattern = excluded.reader_tap_pattern,
           reader_use_paper_texture = excluded.reader_use_paper_texture,
           reader_paper_color = excluded.reader_paper_color,
           reader_font_size = excluded.reader_font_size,
@@ -58,6 +60,7 @@ class SettingsStore {
           settings.themeMode.storageValue,
           settings.openHomeNovelDirectlyInReader ? 1 : 0,
           settings.reader.writingMode.storageValue,
+          settings.reader.tapPattern.storageValue,
           settings.reader.usePaperTexture ? 1 : 0,
           settings.reader.paperColorPreset.storageValue,
           settings.reader.fontSize,
@@ -83,6 +86,9 @@ class SettingsStore {
       reader: ReaderSettings(
         writingMode: ReaderWritingModeX.fromStorageValue(
           row['reader_writing_mode'] as String?,
+        ),
+        tapPattern: ReaderTapPatternX.fromStorageValue(
+          row['reader_tap_pattern'] as String?,
         ),
         usePaperTexture: _intValue(row['reader_use_paper_texture']) != 0,
         paperColorPreset: ReaderPaperColorPresetX.fromStorageValue(

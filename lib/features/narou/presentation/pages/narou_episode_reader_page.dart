@@ -359,29 +359,36 @@ class _NarouEpisodeReaderPageState
     KumihanTapDetails details,
     KumihanTapActions actions,
   ) async {
-    final x = details.normalizedX;
-    if (x <= 1 / 3) {
-      await _handleSideTap(details, actions, KumihanTapSide.left);
+    final appSettings = switch (ref.read(appSettingsProvider)) {
+      AsyncData(:final value) => value,
+      _ => const AppSettings.defaults(),
+    };
+    final tapPattern = appSettings.reader.tapPattern;
+    final action = resolveReaderTapAction(
+      pattern: tapPattern,
+      normalizedX: details.normalizedX,
+      normalizedY: details.normalizedY,
+    );
+    if (action == ReaderTapAction.toggleControls) {
+      _toggleControls();
       return;
     }
-    if (x >= 2 / 3) {
-      await _handleSideTap(details, actions, KumihanTapSide.right);
-      return;
-    }
-    _toggleControls();
+
+    await _handleDirectionalTap(
+      details,
+      actions,
+      isForward: action == ReaderTapAction.forward,
+    );
   }
 
-  Future<void> _handleSideTap(
+  Future<void> _handleDirectionalTap(
     KumihanTapDetails details,
-    KumihanTapActions actions,
-    KumihanTapSide side,
-  ) async {
+    KumihanTapActions actions, {
+    required bool isForward,
+  }) async {
     final data = _latestData;
     final snapshot = details.snapshot;
-    final isForward = switch (snapshot.writingMode) {
-      KumihanWritingMode.vertical => side == KumihanTapSide.left,
-      KumihanWritingMode.horizontal => side == KumihanTapSide.right,
-    };
+    final side = tapSideForDirection(snapshot: snapshot, isForward: isForward);
     final isAtEdge = isAtReaderTurnEdge(
       snapshot: snapshot,
       isForward: isForward,

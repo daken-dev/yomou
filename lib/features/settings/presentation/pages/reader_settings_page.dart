@@ -41,22 +41,19 @@ class _ReaderSettingsContent extends ConsumerWidget {
       children: [
         // ── 文字 ──
         _SectionHeader(title: '文字'),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: SegmentedButton<ReaderWritingMode>(
-            segments: ReaderWritingMode.values
-                .map(
-                  (mode) => ButtonSegment<ReaderWritingMode>(
-                    value: mode,
-                    label: Text(mode.label),
-                  ),
-                )
-                .toList(growable: false),
-            selected: {reader.writingMode},
-            onSelectionChanged: (value) {
-              save(reader.copyWith(writingMode: value.first));
-            },
-          ),
+        _SegmentedTile<ReaderWritingMode>(
+          label: '組方向',
+          segments: ReaderWritingMode.values,
+          selected: reader.writingMode,
+          segmentLabel: (v) => v.label,
+          onChanged: (v) => save(reader.copyWith(writingMode: v)),
+        ),
+        _SegmentedTile<ReaderTapPattern>(
+          label: 'タップ領域',
+          segments: ReaderTapPattern.values,
+          selected: reader.tapPattern,
+          segmentLabel: (v) => v.label,
+          onChanged: (v) => save(reader.copyWith(tapPattern: v)),
         ),
         const SizedBox(height: 8),
         _SliderTile(
@@ -67,6 +64,11 @@ class _ReaderSettingsContent extends ConsumerWidget {
           max: 32,
           divisions: 18,
           onChanged: (value) => save(reader.copyWith(fontSize: value)),
+          onReset: reader.fontSize == const ReaderSettings.defaults().fontSize
+              ? null
+              : () => save(reader.copyWith(
+                    fontSize: const ReaderSettings.defaults().fontSize,
+                  )),
         ),
         _SliderTile(
           label: '余白',
@@ -76,6 +78,13 @@ class _ReaderSettingsContent extends ConsumerWidget {
           max: 1.2,
           divisions: 12,
           onChanged: (value) => save(reader.copyWith(pageMarginScale: value)),
+          onReset: reader.pageMarginScale ==
+                  const ReaderSettings.defaults().pageMarginScale
+              ? null
+              : () => save(reader.copyWith(
+                    pageMarginScale:
+                        const ReaderSettings.defaults().pageMarginScale,
+                  )),
         ),
 
         // ── 紙面 ──
@@ -197,6 +206,42 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
+class _SegmentedTile<T extends Enum> extends StatelessWidget {
+  const _SegmentedTile({
+    super.key,
+    required this.label,
+    required this.segments,
+    required this.selected,
+    required this.segmentLabel,
+    required this.onChanged,
+  });
+
+  final String label;
+  final List<T> segments;
+  final T selected;
+  final String Function(T) segmentLabel;
+  final ValueChanged<T> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      title: Text(label),
+      subtitle: Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: SegmentedButton<T>(
+          segments: segments
+              .map(
+                (v) => ButtonSegment<T>(value: v, label: Text(segmentLabel(v))),
+              )
+              .toList(growable: false),
+          selected: {selected},
+          onSelectionChanged: (value) => onChanged(value.first),
+        ),
+      ),
+    );
+  }
+}
+
 class _SliderTile extends StatelessWidget {
   const _SliderTile({
     required this.label,
@@ -206,6 +251,7 @@ class _SliderTile extends StatelessWidget {
     required this.max,
     required this.divisions,
     required this.onChanged,
+    this.onReset,
   });
 
   final String label;
@@ -215,6 +261,7 @@ class _SliderTile extends StatelessWidget {
   final double max;
   final int divisions;
   final ValueChanged<double> onChanged;
+  final VoidCallback? onReset;
 
   @override
   Widget build(BuildContext context) {
@@ -230,6 +277,16 @@ class _SliderTile extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
+          if (onReset != null)
+            Padding(
+              padding: const EdgeInsets.only(left: 4),
+              child: IconButton(
+                icon: const Icon(Icons.restart_alt, size: 20),
+                tooltip: '規定値に戻す',
+                visualDensity: VisualDensity.compact,
+                onPressed: onReset,
+              ),
+            ),
         ],
       ),
       subtitle: Slider(
