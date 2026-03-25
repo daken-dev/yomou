@@ -350,7 +350,7 @@ class _SaveButton extends StatelessWidget {
         constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
         padding: EdgeInsets.zero,
         visualDensity: VisualDensity.compact,
-        tooltip: isSaved ? '保存解除' : '保存',
+        tooltip: isSaved ? '保存を切り替え' : '保存',
       ),
     );
   }

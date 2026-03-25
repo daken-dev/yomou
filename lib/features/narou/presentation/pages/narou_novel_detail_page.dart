@@ -6,6 +6,7 @@ import 'package:yomou/features/downloads/domain/entities/saved_novel_overview.da
 import 'package:yomou/features/narou/application/narou_novel_detail_controller.dart';
 import 'package:yomou/features/navigation/presentation/widgets/app_scaffold.dart';
 import 'package:yomou/features/novels/domain/entities/novel_site.dart';
+import 'package:yomou/features/novels/domain/entities/novel_summary.dart';
 
 enum _DetailMenuAction { refresh, remove }
 
@@ -17,6 +18,10 @@ class NarouNovelDetailPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final detail = ref.watch(narouNovelDetailControllerProvider(novelId));
+    final detailState = switch (detail) {
+      AsyncData(:final value) => value,
+      _ => null,
+    };
     final savedNovel = ref
         .watch(savedNovelsProvider)
         .value
@@ -29,8 +34,9 @@ class NarouNovelDetailPage extends ConsumerWidget {
         PopupMenuButton<_DetailMenuAction>(
           icon: const Icon(Icons.more_vert),
           tooltip: 'メニュー',
-          onSelected: (action) => _onMenuAction(context, action),
-          itemBuilder: (context) => _buildMenuItems(context),
+          onSelected: (action) =>
+              _onMenuAction(context, ref, action, detailState, savedNovel),
+          itemBuilder: (context) => _buildMenuItems(context, savedNovel),
         ),
       ],
       floatingActionButton: savedNovel == null || !savedNovel.hasResumeTarget
@@ -47,36 +53,41 @@ class NarouNovelDetailPage extends ConsumerWidget {
           onRetry: () =>
               ref.invalidate(narouNovelDetailControllerProvider(novelId)),
         ),
-        data: (state) => _DetailContent(
-          novelId: novelId,
-          state: state,
-          savedNovel: savedNovel,
-        ),
+        data: (state) => _DetailContent(novelId: novelId, state: state),
       ),
     );
   }
 
   List<PopupMenuEntry<_DetailMenuAction>> _buildMenuItems(
     BuildContext context,
+    SavedNovelOverview? savedNovel,
   ) {
     final colorScheme = Theme.of(context).colorScheme;
-    return [
-      const PopupMenuItem(
-        value: _DetailMenuAction.refresh,
-        child: ListTile(
-          leading: Icon(Icons.refresh_rounded),
-          title: Text('更新を確認'),
-          dense: true,
-          contentPadding: EdgeInsets.zero,
+    return <PopupMenuEntry<_DetailMenuAction>>[
+      if (savedNovel != null)
+        const PopupMenuItem(
+          value: _DetailMenuAction.refresh,
+          child: ListTile(
+            leading: Icon(Icons.refresh_rounded),
+            title: Text('更新を確認'),
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+          ),
         ),
-      ),
-      const PopupMenuDivider(),
+      if (savedNovel != null) const PopupMenuDivider(),
       PopupMenuItem(
         value: _DetailMenuAction.remove,
         child: ListTile(
-          leading:
-              Icon(Icons.delete_outline_rounded, color: colorScheme.error),
-          title: Text('保存を解除', style: TextStyle(color: colorScheme.error)),
+          leading: Icon(
+            savedNovel == null
+                ? Icons.bookmark_add_outlined
+                : Icons.bookmark_remove_outlined,
+            color: colorScheme.error,
+          ),
+          title: Text(
+            savedNovel == null ? '保存する' : '保存を切り替え',
+            style: TextStyle(color: colorScheme.error),
+          ),
           dense: true,
           contentPadding: EdgeInsets.zero,
         ),
@@ -84,15 +95,47 @@ class NarouNovelDetailPage extends ConsumerWidget {
     ];
   }
 
-  void _onMenuAction(BuildContext context, _DetailMenuAction action) {
+  void _onMenuAction(
+    BuildContext context,
+    WidgetRef ref,
+    _DetailMenuAction action,
+    NarouNovelDetailState? detailState,
+    SavedNovelOverview? savedNovel,
+  ) {
+    final scheduler = ref.read(downloadSchedulerProvider);
+
     switch (action) {
       case _DetailMenuAction.refresh:
-        // TODO: 更新ロジック
+        if (savedNovel == null) {
+          return;
+        }
+        scheduler.refreshNovel(savedNovel.site, savedNovel.id);
         break;
       case _DetailMenuAction.remove:
-        // TODO: 保存解除ロジック
+        if (savedNovel != null) {
+          scheduler.removeNovel(savedNovel.site, savedNovel.id);
+          return;
+        }
+        if (detailState == null) {
+          return;
+        }
+        scheduler.saveNovel(_novelSummary(detailState));
         break;
     }
+  }
+
+  NovelSummary _novelSummary(NarouNovelDetailState state) {
+    return NovelSummary(
+      site: NovelSite.narou,
+      id: novelId,
+      title: state.title,
+      author: state.authorName,
+      story: state.summary,
+      genre: state.infoFields['ジャンル'] ?? '',
+      keyword: state.infoFields['キーワード'] ?? '',
+      episodeCount: state.items.where((item) => !item.isChapter).length,
+      isComplete: (state.infoFields['完結・連載'] ?? '').contains('完結'),
+    );
   }
 
   String _resumeLocation(SavedNovelOverview novel) {
@@ -141,10 +184,7 @@ class _ErrorView extends StatelessWidget {
               color: colorScheme.error,
             ),
             const SizedBox(height: 16),
-            Text(
-              '作品の取得に失敗しました',
-              style: theme.textTheme.titleMedium,
-            ),
+            Text('作品の取得に失敗しました', style: theme.textTheme.titleMedium),
             const SizedBox(height: 8),
             Text(
               error.toString(),
@@ -167,15 +207,10 @@ class _ErrorView extends StatelessWidget {
 }
 
 class _DetailContent extends ConsumerWidget {
-  const _DetailContent({
-    required this.novelId,
-    required this.state,
-    required this.savedNovel,
-  });
+  const _DetailContent({required this.novelId, required this.state});
 
   final String novelId;
   final NarouNovelDetailState state;
-  final SavedNovelOverview? savedNovel;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -193,9 +228,7 @@ class _DetailContent extends ConsumerWidget {
           // Header
           SliverToBoxAdapter(child: _NovelHeader(state: state)),
           // Episode count summary
-          SliverToBoxAdapter(
-            child: _EpisodeSummaryBar(state: state),
-          ),
+          SliverToBoxAdapter(child: _EpisodeSummaryBar(state: state)),
           // Episode list
           SliverPadding(
             padding: const EdgeInsets.only(bottom: 88),
@@ -436,10 +469,8 @@ class _EpisodeSummaryBar extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    final episodeCount =
-        state.items.where((item) => !item.isChapter).length;
-    final chapterCount =
-        state.items.where((item) => item.isChapter).length;
+    final episodeCount = state.items.where((item) => !item.isChapter).length;
+    final chapterCount = state.items.where((item) => item.isChapter).length;
 
     final hasMore = state.hasMore;
 
@@ -454,11 +485,7 @@ class _EpisodeSummaryBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.menu_book_rounded,
-            size: 18,
-            color: colorScheme.primary,
-          ),
+          Icon(Icons.menu_book_rounded, size: 18, color: colorScheme.primary),
           const SizedBox(width: 8),
           Text(
             hasMore ? '$episodeCount話+' : '$episodeCount話',

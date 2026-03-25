@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:yomou/features/downloads/application/download_providers.dart';
 import 'package:yomou/features/downloads/domain/entities/download_job_overview.dart';
 import 'package:yomou/features/downloads/domain/entities/saved_novel_overview.dart';
+import 'package:yomou/features/novels/domain/entities/novel_site.dart';
 
 enum _NovelMenuAction { episodes, resume, refresh, remove }
 
-class SavedNovelTile extends StatelessWidget {
-  const SavedNovelTile({
-    super.key,
-    required this.novel,
-    this.onTap,
-  });
+class SavedNovelTile extends ConsumerWidget {
+  const SavedNovelTile({super.key, required this.novel, this.onTap});
 
   final SavedNovelOverview novel;
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
@@ -32,7 +32,7 @@ class SavedNovelTile extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        onLongPress: () => _showMenu(context),
+        onLongPress: () => _showMenu(context, ref),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 4, 12),
           child: Column(
@@ -73,7 +73,13 @@ class SavedNovelTile extends StatelessWidget {
                         ),
                       ),
                     ),
-                  _MenuButton(onSelected: (action) => _onMenuAction(context, action)),
+                  PopupMenuButton<_NovelMenuAction>(
+                    onSelected: (action) => _onMenuAction(context, ref, action),
+                    icon: const Icon(Icons.more_vert, size: 20),
+                    padding: EdgeInsets.zero,
+                    tooltip: 'メニュー',
+                    itemBuilder: (_) => _buildMenuItems(context),
+                  ),
                 ],
               ),
               const SizedBox(height: 8),
@@ -118,7 +124,7 @@ class SavedNovelTile extends StatelessWidget {
     );
   }
 
-  void _showMenu(BuildContext context) {
+  void _showMenu(BuildContext context, WidgetRef ref) {
     final box = context.findRenderObject() as RenderBox;
     final offset = box.localToGlobal(Offset.zero);
     final size = box.size;
@@ -135,7 +141,7 @@ class SavedNovelTile extends StatelessWidget {
     ).then((action) {
       if (action == null) return;
       if (!context.mounted) return;
-      _onMenuAction(context, action);
+      _onMenuAction(context, ref, action);
     });
   }
 
@@ -174,8 +180,11 @@ class SavedNovelTile extends StatelessWidget {
       PopupMenuItem(
         value: _NovelMenuAction.remove,
         child: ListTile(
-          leading: Icon(Icons.delete_outline_rounded, color: colorScheme.error),
-          title: Text('保存を解除', style: TextStyle(color: colorScheme.error)),
+          leading: Icon(
+            Icons.bookmark_remove_outlined,
+            color: colorScheme.error,
+          ),
+          title: Text('保存を切り替え', style: TextStyle(color: colorScheme.error)),
           dense: true,
           contentPadding: EdgeInsets.zero,
         ),
@@ -183,81 +192,55 @@ class SavedNovelTile extends StatelessWidget {
     ];
   }
 
-  void _onMenuAction(BuildContext context, _NovelMenuAction action) {
+  void _onMenuAction(
+    BuildContext context,
+    WidgetRef? ref,
+    _NovelMenuAction action,
+  ) {
+    final scheduler = ref?.read(downloadSchedulerProvider);
+
     switch (action) {
       case _NovelMenuAction.episodes:
-        // TODO: エピソード一覧画面へ遷移
+        context.push(_detailLocation());
         break;
       case _NovelMenuAction.resume:
-        // TODO: しおり位置でリーダーを開く
+        if (!novel.hasResumeTarget) {
+          return;
+        }
+        context.push(_resumeLocation());
         break;
       case _NovelMenuAction.refresh:
-        // TODO: 更新を実行
+        if (scheduler == null) {
+          return;
+        }
+        scheduler.refreshNovel(novel.site, novel.id);
         break;
       case _NovelMenuAction.remove:
-        // TODO: 保存解除（確認ダイアログ付き）
+        if (scheduler == null) {
+          return;
+        }
+        scheduler.removeNovel(novel.site, novel.id);
         break;
     }
   }
-}
 
-class _MenuButton extends StatelessWidget {
-  const _MenuButton({required this.onSelected});
-
-  final ValueChanged<_NovelMenuAction> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return PopupMenuButton<_NovelMenuAction>(
-      onSelected: onSelected,
-      icon: const Icon(Icons.more_vert, size: 20),
-      padding: EdgeInsets.zero,
-      tooltip: 'メニュー',
-      itemBuilder: (_) => _buildItems(context),
-    );
+  String _detailLocation() {
+    return switch (novel.site) {
+      NovelSite.narou => '/narou/novel/${novel.id}',
+    };
   }
 
-  List<PopupMenuEntry<_NovelMenuAction>> _buildItems(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return [
-      const PopupMenuItem(
-        value: _NovelMenuAction.episodes,
-        child: ListTile(
-          leading: Icon(Icons.list_rounded),
-          title: Text('エピソード一覧'),
-          dense: true,
-          contentPadding: EdgeInsets.zero,
-        ),
-      ),
-      const PopupMenuItem(
-        value: _NovelMenuAction.resume,
-        child: ListTile(
-          leading: Icon(Icons.auto_stories_rounded),
-          title: Text('続きを読む'),
-          dense: true,
-          contentPadding: EdgeInsets.zero,
-        ),
-      ),
-      const PopupMenuDivider(),
-      const PopupMenuItem(
-        value: _NovelMenuAction.refresh,
-        child: ListTile(
-          leading: Icon(Icons.refresh_rounded),
-          title: Text('更新を確認'),
-          dense: true,
-          contentPadding: EdgeInsets.zero,
-        ),
-      ),
-      PopupMenuItem(
-        value: _NovelMenuAction.remove,
-        child: ListTile(
-          leading: Icon(Icons.delete_outline_rounded, color: colorScheme.error),
-          title: Text('保存を解除', style: TextStyle(color: colorScheme.error)),
-          dense: true,
-          contentPadding: EdgeInsets.zero,
-        ),
-      ),
-    ];
+  String _resumeLocation() {
+    final queryParameters = <String, String>{};
+    if (novel.hasResumePageProgress) {
+      queryParameters['resumePage'] = novel.resumePageNumber.toString();
+      queryParameters['resumePageCount'] = novel.resumePageCount.toString();
+    }
+
+    return Uri(
+      path: '/narou/novel/${novel.id}/episode/${novel.resumeEpisodeNo}',
+      queryParameters: queryParameters.isEmpty ? null : queryParameters,
+    ).toString();
   }
 }
 
@@ -284,7 +267,9 @@ class _EpisodeCount extends StatelessWidget {
         Icon(
           Icons.menu_book_rounded,
           size: 14,
-          color: hasRemaining ? colorScheme.primary : colorScheme.onSurfaceVariant,
+          color: hasRemaining
+              ? colorScheme.primary
+              : colorScheme.onSurfaceVariant,
         ),
         const SizedBox(width: 4),
         Text.rich(
@@ -293,8 +278,12 @@ class _EpisodeCount extends StatelessWidget {
               TextSpan(
                 text: '残り$remaining',
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: hasRemaining ? colorScheme.primary : colorScheme.onSurfaceVariant,
-                  fontWeight: hasRemaining ? FontWeight.bold : FontWeight.normal,
+                  color: hasRemaining
+                      ? colorScheme.primary
+                      : colorScheme.onSurfaceVariant,
+                  fontWeight: hasRemaining
+                      ? FontWeight.bold
+                      : FontWeight.normal,
                 ),
               ),
               TextSpan(
@@ -333,9 +322,9 @@ class _InfoChip extends StatelessWidget {
         const SizedBox(width: 4),
         Text(
           label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: colorScheme.onSurfaceVariant,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
         ),
       ],
     );
@@ -392,4 +381,3 @@ String _formatDateTime(DateTime value) {
   final second = local.second.toString().padLeft(2, '0');
   return '$year-$month-$day $hour:$minute:$second';
 }
-

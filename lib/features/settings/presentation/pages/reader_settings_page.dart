@@ -31,6 +31,7 @@ class _ReaderSettingsContent extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final store = ref.read(settingsStoreProvider);
     final reader = settings.reader;
+    final theme = Theme.of(context);
 
     Future<void> save(ReaderSettings next) async {
       await store.saveSettings(settings.copyWith(reader: next));
@@ -38,9 +39,10 @@ class _ReaderSettingsContent extends ConsumerWidget {
 
     return ListView(
       children: [
-        const ListTile(title: Text('文字方向')),
+        // ── 文字 ──
+        _SectionHeader(title: '文字'),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: SegmentedButton<ReaderWritingMode>(
             segments: ReaderWritingMode.values
                 .map(
@@ -56,18 +58,31 @@ class _ReaderSettingsContent extends ConsumerWidget {
             },
           ),
         ),
-        const Divider(),
-        SwitchListTile(
-          title: const Text('紙のテクスチャを適用'),
-          subtitle: const Text('Paper 03 を使用'),
-          value: reader.usePaperTexture,
-          onChanged: (value) {
-            save(reader.copyWith(usePaperTexture: value));
-          },
+        const SizedBox(height: 8),
+        _SliderTile(
+          label: '文字サイズ',
+          value: reader.fontSize.clamp(14, 32).toDouble(),
+          displayValue: reader.fontSize.toStringAsFixed(0),
+          min: 14,
+          max: 32,
+          divisions: 18,
+          onChanged: (value) => save(reader.copyWith(fontSize: value)),
         ),
-        const ListTile(title: Text('紙色')),
+        _SliderTile(
+          label: '余白',
+          value: reader.pageMarginScale.clamp(0.6, 1.2).toDouble(),
+          displayValue: '${(reader.pageMarginScale * 100).round()}%',
+          min: 0.6,
+          max: 1.2,
+          divisions: 12,
+          onChanged: (value) => save(reader.copyWith(pageMarginScale: value)),
+        ),
+
+        // ── 紙面 ──
+        const SizedBox(height: 8),
+        _SectionHeader(title: '紙面'),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: SegmentedButton<ReaderPaperColorPreset>(
             segments: ReaderPaperColorPreset.values
                 .map(
@@ -83,34 +98,21 @@ class _ReaderSettingsContent extends ConsumerWidget {
             },
           ),
         ),
-        const Divider(),
-        ListTile(
-          title: Text('文字サイズ ${reader.fontSize.toStringAsFixed(1)}'),
-        ),
-        Slider(
-          min: 14,
-          max: 32,
-          divisions: 18,
-          value: reader.fontSize.clamp(14, 32).toDouble(),
-          onChanged: (value) {
-            save(reader.copyWith(fontSize: value));
-          },
-        ),
-        ListTile(
-          title: Text('余白 ${reader.pageMarginScale.toStringAsFixed(2)}'),
-        ),
-        Slider(
-          min: 0.6,
-          max: 1.2,
-          divisions: 12,
-          value: reader.pageMarginScale.clamp(0.6, 1.2).toDouble(),
-          onChanged: (value) {
-            save(reader.copyWith(pageMarginScale: value));
-          },
-        ),
-        const Divider(),
         SwitchListTile(
-          title: const Text('横画面で見開きモードにする'),
+          title: const Text('紙のテクスチャ'),
+          subtitle: const Text('紙の質感を再現する'),
+          value: reader.usePaperTexture,
+          onChanged: (value) {
+            save(reader.copyWith(usePaperTexture: value));
+          },
+        ),
+
+        // ── 表示 ──
+        const SizedBox(height: 8),
+        _SectionHeader(title: '表示'),
+        SwitchListTile(
+          title: const Text('横画面で見開き'),
+          subtitle: const Text('横向き時に2ページ並べて表示'),
           value: reader.enableLandscapeDoublePage,
           onChanged: (value) {
             save(reader.copyWith(enableLandscapeDoublePage: value));
@@ -130,7 +132,113 @@ class _ReaderSettingsContent extends ConsumerWidget {
             save(reader.copyWith(showAfterword: value));
           },
         ),
+
+        // ── リセット ──
+        const SizedBox(height: 24),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: FilledButton.tonalIcon(
+            onPressed: () => _confirmReset(context, store),
+            icon: const Icon(Icons.settings_backup_restore),
+            label: const Text('リーダー設定を規定値に戻す'),
+            style: FilledButton.styleFrom(
+              foregroundColor: theme.colorScheme.error,
+            ),
+          ),
+        ),
+        const SizedBox(height: 32),
       ],
+    );
+  }
+
+  Future<void> _confirmReset(BuildContext context, dynamic store) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('リーダー設定を規定値に戻す'),
+        content: const Text('リーダーの設定が初期状態にリセットされます。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('キャンセル'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('リセット'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await store.saveSettings(
+        settings.copyWith(reader: const ReaderSettings.defaults()),
+      );
+    }
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+      child: Text(
+        title,
+        style: theme.textTheme.titleSmall?.copyWith(
+          color: theme.colorScheme.primary,
+        ),
+      ),
+    );
+  }
+}
+
+class _SliderTile extends StatelessWidget {
+  const _SliderTile({
+    required this.label,
+    required this.value,
+    required this.displayValue,
+    required this.min,
+    required this.max,
+    required this.divisions,
+    required this.onChanged,
+  });
+
+  final String label;
+  final double value;
+  final String displayValue;
+  final double min;
+  final double max;
+  final int divisions;
+  final ValueChanged<double> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      title: Row(
+        children: [
+          Text(label),
+          const Spacer(),
+          Text(
+            displayValue,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.primary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+      subtitle: Slider(
+        min: min,
+        max: max,
+        divisions: divisions,
+        value: value,
+        onChanged: onChanged,
+      ),
     );
   }
 }
