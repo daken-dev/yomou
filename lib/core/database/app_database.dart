@@ -93,14 +93,19 @@ class AppDatabase {
 
     if (currentVersion == 0) {
       _createSchema(database);
-      database.execute('PRAGMA user_version = 2');
+      database.execute('PRAGMA user_version = 3');
       return;
     }
 
     if (currentVersion < 2) {
       _migrateToV2(database);
-      database.execute('PRAGMA user_version = 2');
     }
+
+    if (currentVersion < 3) {
+      _migrateToV3(database);
+    }
+
+    database.execute('PRAGMA user_version = 3');
   }
 
   void _createSchema(sqlite.Database database) {
@@ -212,6 +217,22 @@ class AppDatabase {
         FOREIGN KEY (site, novel_id)
           REFERENCES saved_novels(site, novel_id)
           ON DELETE CASCADE
+        )
+    ''');
+
+    database.execute('''
+      CREATE TABLE IF NOT EXISTS app_settings (
+        id INTEGER NOT NULL PRIMARY KEY CHECK (id = 1),
+        theme_mode TEXT NOT NULL DEFAULT 'system',
+        open_home_novel_directly_in_reader INTEGER NOT NULL DEFAULT 1,
+        reader_writing_mode TEXT NOT NULL DEFAULT 'vertical',
+        reader_use_paper_texture INTEGER NOT NULL DEFAULT 1,
+        reader_paper_color TEXT NOT NULL DEFAULT 'washi',
+        reader_font_size REAL NOT NULL DEFAULT 20,
+        reader_page_margin_scale REAL NOT NULL DEFAULT 0.82,
+        reader_landscape_double_page INTEGER NOT NULL DEFAULT 1,
+        reader_show_preface INTEGER NOT NULL DEFAULT 1,
+        reader_show_afterword INTEGER NOT NULL DEFAULT 1
       )
     ''');
   }
@@ -224,6 +245,24 @@ class AppDatabase {
     database.execute('''
       ALTER TABLE novel_bookmarks
       ADD COLUMN page_count INTEGER NOT NULL DEFAULT 0
+    ''');
+  }
+
+  void _migrateToV3(sqlite.Database database) {
+    database.execute('''
+      CREATE TABLE IF NOT EXISTS app_settings (
+        id INTEGER NOT NULL PRIMARY KEY CHECK (id = 1),
+        theme_mode TEXT NOT NULL DEFAULT 'system',
+        open_home_novel_directly_in_reader INTEGER NOT NULL DEFAULT 1,
+        reader_writing_mode TEXT NOT NULL DEFAULT 'vertical',
+        reader_use_paper_texture INTEGER NOT NULL DEFAULT 1,
+        reader_paper_color TEXT NOT NULL DEFAULT 'washi',
+        reader_font_size REAL NOT NULL DEFAULT 20,
+        reader_page_margin_scale REAL NOT NULL DEFAULT 0.82,
+        reader_landscape_double_page INTEGER NOT NULL DEFAULT 1,
+        reader_show_preface INTEGER NOT NULL DEFAULT 1,
+        reader_show_afterword INTEGER NOT NULL DEFAULT 1
+      )
     ''');
   }
 }

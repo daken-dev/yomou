@@ -2,31 +2,39 @@ import 'package:html/dom.dart' as html;
 import 'package:html/parser.dart' as html_parser;
 import 'package:kumihan/kumihan.dart';
 import 'package:yomou/features/downloads/data/narou_web_client.dart';
+import 'package:yomou/features/settings/domain/entities/app_settings.dart';
 
 class NarouKumihanParser {
   const NarouKumihanParser();
 
-  KumihanDocument parseEpisode(NarouEpisodePage page) {
+  KumihanDocument parseEpisode(
+    NarouEpisodePage page, {
+    ReaderSettings settings = const ReaderSettings.defaults(),
+  }) {
     final blocks = <KumihanBlock>[];
 
-    _appendSection(
-      blocks,
-      htmlFragment: page.prefaceHtml,
-      fallbackText: page.preface,
-      baseUrl: page.url,
-    );
+    if (settings.showPreface) {
+      _appendSection(
+        blocks,
+        htmlFragment: page.prefaceHtml,
+        fallbackText: page.preface,
+        baseUrl: page.url,
+      );
+    }
     _appendSection(
       blocks,
       htmlFragment: page.bodyHtml,
       fallbackText: page.body,
       baseUrl: page.url,
     );
-    _appendSection(
-      blocks,
-      htmlFragment: page.afterwordHtml,
-      fallbackText: page.afterword,
-      baseUrl: page.url,
-    );
+    if (settings.showAfterword) {
+      _appendSection(
+        blocks,
+        htmlFragment: page.afterwordHtml,
+        fallbackText: page.afterword,
+        baseUrl: page.url,
+      );
+    }
 
     _trimTrailingBlankParagraphs(blocks);
 

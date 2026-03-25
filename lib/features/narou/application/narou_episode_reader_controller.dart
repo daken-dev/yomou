@@ -1,7 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kumihan/kumihan.dart';
 import 'package:yomou/features/downloads/data/narou_web_client.dart';
-import 'package:yomou/features/narou/data/narou_kumihan_parser.dart';
 
 final narouEpisodeReaderProvider = FutureProvider.autoDispose
     .family<NarouEpisodeReaderData, NarouEpisodeReaderRequest>((
@@ -17,7 +15,6 @@ final narouEpisodeReaderProvider = FutureProvider.autoDispose
           );
 
       return NarouEpisodeReaderData(
-        document: const NarouKumihanParser().parseEpisode(page),
         page: page,
         previousEpisodeNo:
             extractEpisodeNumber(page.prevUrl) ?? _previousEpisodeNo(page),
@@ -51,13 +48,11 @@ class NarouEpisodeReaderRequest {
 
 class NarouEpisodeReaderData {
   const NarouEpisodeReaderData({
-    required this.document,
     required this.page,
     required this.previousEpisodeNo,
     required this.nextEpisodeNo,
   });
 
-  final KumihanDocument document;
   final NarouEpisodePage page;
   final int? previousEpisodeNo;
   final int? nextEpisodeNo;

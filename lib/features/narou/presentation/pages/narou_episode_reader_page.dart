@@ -8,8 +8,11 @@ import 'package:go_router/go_router.dart';
 import 'package:kumihan/kumihan.dart';
 import 'package:yomou/features/downloads/application/download_providers.dart';
 import 'package:yomou/features/narou/application/narou_episode_reader_controller.dart';
+import 'package:yomou/features/narou/data/narou_kumihan_parser.dart';
 import 'package:yomou/features/narou/data/narou_episode_image_cache.dart';
 import 'package:yomou/features/novels/domain/entities/novel_site.dart';
+import 'package:yomou/features/settings/application/settings_providers.dart';
+import 'package:yomou/features/settings/domain/entities/app_settings.dart';
 
 class NarouEpisodeReaderPage extends ConsumerStatefulWidget {
   const NarouEpisodeReaderPage({
@@ -43,6 +46,8 @@ class _NarouEpisodeReaderPageState
   NarouEpisodeReaderData? _latestData;
   _PendingRestorePosition? _pendingRestorePosition;
   Timer? _saveProgressDebounce;
+  String? _documentConfigKey;
+  KumihanDocument? _cachedDocument;
 
   @override
   void initState() {
@@ -76,17 +81,28 @@ class _NarouEpisodeReaderPageState
       episodeUrl: _currentEpisodeUrl,
     );
     final episodeAsync = ref.watch(narouEpisodeReaderProvider(request));
+    final appSettingsAsync = ref.watch(appSettingsProvider);
+    final appSettings = switch (appSettingsAsync) {
+      AsyncData(:final value) => value,
+      _ => const AppSettings.defaults(),
+    };
+    final readerSettings = appSettings.reader;
     final imageLoader = ref.watch(narouEpisodeImageCacheProvider).loadImage;
     final snapshot = _kumihanController.snapshot;
+    final readerTheme = readerSettings.toKumihanTheme(
+      paperTexture: const AssetImage('assets/paper_textures/03.jpg'),
+    );
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F0DF),
+      backgroundColor: readerTheme.paperColor,
       body: switch (episodeAsync) {
         AsyncData(:final value) => _buildReader(
           context,
           data: value,
           imageLoader: imageLoader,
           snapshot: snapshot,
+          readerSettings: readerSettings,
+          readerTheme: readerTheme,
         ),
         AsyncError(:final error) => _buildError(context, error, request),
         _ => const Center(child: CircularProgressIndicator()),
@@ -99,6 +115,8 @@ class _NarouEpisodeReaderPageState
     required NarouEpisodeReaderData data,
     required Future<ui.Image?> Function(String) imageLoader,
     required KumihanSnapshot snapshot,
+    required ReaderSettings readerSettings,
+    required KumihanThemeData readerTheme,
   }) {
     _latestData = data;
     if (_nextStartPosition == _EpisodeStartPosition.lastPage) {
@@ -110,6 +128,18 @@ class _NarouEpisodeReaderPageState
         unawaited(_kumihanController.showLastPage());
       });
     }
+    final document = _documentFor(data: data, readerSettings: readerSettings);
+    final isLandscape =
+        MediaQuery.orientationOf(context) == Orientation.landscape;
+    final desiredSpreadMode =
+        readerSettings.enableLandscapeDoublePage && isLandscape
+        ? KumihanSpreadMode.doublePage
+        : KumihanSpreadMode.single;
+    _syncReaderModes(
+      desiredWritingMode: readerSettings.writingMode.kumihanValue,
+      desiredSpreadMode: desiredSpreadMode,
+      snapshot: snapshot,
+    );
 
     final pageTitle = data.page.title ?? '本文';
     final novelTitle = data.page.novelTitle ?? widget.novelId;
@@ -129,18 +159,12 @@ class _NarouEpisodeReaderPageState
               '${widget.novelId}:$_currentEpisodeNo:${_currentEpisodeUrl ?? ''}',
             ),
             controller: _kumihanController,
-            document: data.document,
+            document: document,
             imageLoader: imageLoader,
-            initialSpread: KumihanSpreadMode.single,
-            initialWritingMode: KumihanWritingMode.vertical,
-            layout: const KumihanLayoutData(
-              fontSize: 20,
-              pageMarginScale: 0.82,
-            ),
-            theme: const KumihanThemeData(
-              paperColor: Color(0xFFF6F0DF),
-              textColor: Color(0xFF2A241C),
-            ),
+            initialSpread: desiredSpreadMode,
+            initialWritingMode: readerSettings.writingMode.kumihanValue,
+            layout: readerSettings.layout,
+            theme: readerTheme,
             tapHandler: _handleTap,
             onSnapshotChanged: (snapshot) =>
                 _handleSnapshotChanged(data: data, snapshot: snapshot),
@@ -218,6 +242,16 @@ class _NarouEpisodeReaderPageState
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
                                   ),
+                                ),
+                                IconButton(
+                                  onPressed: () => context.push(
+                                    '/settings/reader',
+                                  ),
+                                  icon: const Icon(
+                                    Icons.settings,
+                                    color: Colors.white,
+                                  ),
+                                  tooltip: 'リーダー設定',
                                 ),
                               ],
                             ),
@@ -395,6 +429,8 @@ class _NarouEpisodeReaderPageState
       _nextStartPosition = startPosition;
       _latestData = null;
       _pendingRestorePosition = null;
+      _documentConfigKey = null;
+      _cachedDocument = null;
     });
     _applyFullscreenMode();
   }
@@ -483,6 +519,63 @@ class _NarouEpisodeReaderPageState
         (completedPages * currentPageCount) ~/ savedPageCount;
     final restoredPage = safeCompletedPages + 1;
     return restoredPage.clamp(1, currentPageCount);
+  }
+
+  KumihanDocument _documentFor({
+    required NarouEpisodeReaderData data,
+    required ReaderSettings readerSettings,
+  }) {
+    final configKey = [
+      widget.novelId,
+      _currentEpisodeNo,
+      readerSettings.showPreface,
+      readerSettings.showAfterword,
+    ].join(':');
+    if (_documentConfigKey == configKey && _cachedDocument != null) {
+      return _cachedDocument!;
+    }
+
+    final snapshot = _kumihanController.snapshot;
+    if (_documentConfigKey != null &&
+        _documentConfigKey != configKey &&
+        snapshot.totalPages > 0) {
+      _pendingRestorePosition = _PendingRestorePosition(
+        pageNumber: snapshot.currentPage + 1,
+        pageCount: snapshot.totalPages,
+      );
+    }
+
+    final document = const NarouKumihanParser().parseEpisode(
+      data.page,
+      settings: readerSettings,
+    );
+    _documentConfigKey = configKey;
+    _cachedDocument = document;
+    return document;
+  }
+
+  void _syncReaderModes({
+    required KumihanWritingMode desiredWritingMode,
+    required KumihanSpreadMode desiredSpreadMode,
+    required KumihanSnapshot snapshot,
+  }) {
+    if (snapshot.writingMode == desiredWritingMode &&
+        snapshot.spreadMode == desiredSpreadMode) {
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) {
+        return;
+      }
+
+      if (_kumihanController.snapshot.writingMode != desiredWritingMode) {
+        await _kumihanController.toggleWritingMode();
+      }
+      if (_kumihanController.snapshot.spreadMode != desiredSpreadMode) {
+        await _kumihanController.toggleSpread();
+      }
+    });
   }
 }
 

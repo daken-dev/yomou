@@ -3,6 +3,7 @@ import 'package:html/parser.dart' as html_parser;
 import 'package:kumihan/kumihan.dart';
 import 'package:yomou/features/downloads/data/narou_web_client.dart';
 import 'package:yomou/features/narou/data/narou_kumihan_parser.dart';
+import 'package:yomou/features/settings/domain/entities/app_settings.dart';
 
 void main() {
   test(
@@ -163,6 +164,43 @@ void main() {
     final paragraphs = parsed.blocks
         .whereType<KumihanParagraphBlock>()
         .toList();
+
+    expect(paragraphs, hasLength(1));
+    expect(_paragraphText(paragraphs.single.children), '本文です。');
+  });
+
+  test('NarouKumihanParser can hide preface and afterword', () {
+    const page = NarouEpisodePage(
+      url: 'https://ncode.syosetu.com/n0000aa/1/',
+      novelTitle: '作品',
+      novelUrl: 'https://ncode.syosetu.com/n0000aa/',
+      authorName: '作者',
+      authorUrl: 'https://mypage.syosetu.com/1/',
+      sequence: '1 / 1',
+      sequenceCurrent: 1,
+      sequenceTotal: 1,
+      title: '一話',
+      preface: '前書きです。',
+      prefaceHtml: null,
+      body: '本文です。',
+      bodyHtml: null,
+      afterword: 'あとがきです。',
+      afterwordHtml: null,
+      tocUrl: 'https://ncode.syosetu.com/n0000aa/',
+      prevUrl: null,
+      nextUrl: null,
+    );
+
+    final parsed = const NarouKumihanParser().parseEpisode(
+      page,
+      settings: const ReaderSettings.defaults().copyWith(
+        showPreface: false,
+        showAfterword: false,
+      ),
+    );
+    final paragraphs = parsed.blocks
+        .whereType<KumihanParagraphBlock>()
+        .toList(growable: false);
 
     expect(paragraphs, hasLength(1));
     expect(_paragraphText(paragraphs.single.children), '本文です。');

@@ -6,6 +6,8 @@ import 'package:yomou/features/downloads/domain/entities/saved_novel_overview.da
 import 'package:yomou/features/downloads/presentation/widgets/download_summary_widgets.dart';
 import 'package:yomou/features/navigation/presentation/widgets/app_scaffold.dart';
 import 'package:yomou/features/novels/domain/entities/novel_site.dart';
+import 'package:yomou/features/settings/application/settings_providers.dart';
+import 'package:yomou/features/settings/domain/entities/app_settings.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -22,6 +24,11 @@ class _HomePageState extends ConsumerState<HomePage> {
   @override
   Widget build(BuildContext context) {
     final savedNovels = ref.watch(savedNovelsProvider);
+    final settingsAsync = ref.watch(appSettingsProvider);
+    final settings = switch (settingsAsync) {
+      AsyncData(:final value) => value,
+      _ => const AppSettings.defaults(),
+    };
     final items = savedNovels.value;
 
     return AppScaffold(
@@ -72,7 +79,11 @@ class _HomePageState extends ConsumerState<HomePage> {
                             return SavedNovelTile(
                               novel: item,
                               onTap: () => context.push(
-                                _savedNovelLocation(item.site, item.id),
+                                _savedNovelLocation(
+                                  item,
+                                  openDirectlyInReader:
+                                      settings.openHomeNovelDirectlyInReader,
+                                ),
                               ),
                             );
                           },
@@ -119,9 +130,25 @@ class _HomePageState extends ConsumerState<HomePage> {
     return sorted;
   }
 
-  String _savedNovelLocation(NovelSite site, String novelId) {
-    return switch (site) {
-      NovelSite.narou => '/narou/novel/$novelId',
+  String _savedNovelLocation(
+    SavedNovelOverview novel, {
+    required bool openDirectlyInReader,
+  }) {
+    if (openDirectlyInReader && novel.hasResumeTarget) {
+      final queryParameters = <String, String>{};
+      if (novel.hasResumePageProgress) {
+        queryParameters['resumePage'] = novel.resumePageNumber.toString();
+        queryParameters['resumePageCount'] = novel.resumePageCount.toString();
+      }
+
+      return Uri(
+        path: '/narou/novel/${novel.id}/episode/${novel.resumeEpisodeNo}',
+        queryParameters: queryParameters.isEmpty ? null : queryParameters,
+      ).toString();
+    }
+
+    return switch (novel.site) {
+      NovelSite.narou => '/narou/novel/${novel.id}',
     };
   }
 }

@@ -1,7 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:yomou/features/common/presentation/pages/simple_text_page.dart';
 import 'package:yomou/features/downloads/presentation/pages/download_status_page.dart';
 import 'package:yomou/features/home/presentation/pages/home_page.dart';
 import 'package:yomou/features/narou/presentation/pages/narou_episode_reader_page.dart';
@@ -14,6 +12,8 @@ import 'package:yomou/features/novels/domain/entities/novel_site.dart';
 import 'package:yomou/features/rankings/presentation/pages/site_ranking_page.dart';
 import 'package:yomou/features/search/presentation/pages/narou_search_page.dart';
 import 'package:yomou/features/search/presentation/pages/narou_search_results_page.dart';
+import 'package:yomou/features/settings/presentation/pages/reader_settings_page.dart';
+import 'package:yomou/features/settings/presentation/pages/settings_page.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -72,8 +72,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/settings',
-        builder: (context, state) =>
-            const SimpleTextPage(title: '設定', body: Text('設定')),
+        builder: (context, state) => const SettingsPage(),
+      ),
+      GoRoute(
+        path: '/settings/reader',
+        builder: (context, state) => const ReaderSettingsPage(),
       ),
       GoRoute(
         path: '/downloads',
