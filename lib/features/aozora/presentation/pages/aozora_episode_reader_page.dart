@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:kumihan/kumihan.dart';
 import 'package:yomou/features/aozora/application/aozora_episode_reader_controller.dart';
 import 'package:yomou/features/downloads/application/download_providers.dart';
+import 'package:yomou/features/downloads/data/download_store.dart';
 import 'package:yomou/features/narou/data/narou_episode_image_cache.dart';
 import 'package:yomou/features/narou/presentation/reader_navigation.dart';
 import 'package:yomou/features/novels/domain/entities/novel_site.dart';
@@ -39,6 +40,7 @@ class AozoraEpisodeReaderPage extends ConsumerStatefulWidget {
 class _AozoraEpisodeReaderPageState
     extends ConsumerState<AozoraEpisodeReaderPage> {
   final KumihanController _controller = KumihanController();
+  late final DownloadStore _downloadStore;
   Timer? _saveProgressDebounce;
   var _controlsVisible = false;
   _PendingRestorePosition? _pendingRestorePosition;
@@ -47,6 +49,7 @@ class _AozoraEpisodeReaderPageState
   @override
   void initState() {
     super.initState();
+    _downloadStore = ref.read(downloadStoreProvider);
     if (widget.resumePage != null &&
         widget.resumePageCount != null &&
         widget.resumePage! > 0 &&
@@ -278,7 +281,7 @@ class _AozoraEpisodeReaderPageState
 
   void _saveProgressNow(KumihanSnapshot snapshot) {
     unawaited(
-      ref.read(downloadStoreProvider).saveReadingProgress(
+      _downloadStore.saveReadingProgress(
         site: NovelSite.aozora,
         novelId: widget.novelId,
         episodeNo: 1,
