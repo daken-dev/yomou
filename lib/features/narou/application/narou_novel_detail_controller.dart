@@ -22,6 +22,8 @@ class NarouNovelDetailController extends AsyncNotifier<NarouNovelDetailState> {
     return NarouNovelDetailState(
       title: infoPage.title ?? tocPage.title ?? novelId,
       authorName: infoPage.authorName ?? tocPage.authorName ?? '',
+      summary: tocPage.summary ?? '',
+      infoFields: infoPage.fields,
       items: _mapEntries(tocPage.entries),
       currentPage: tocPage.page,
       lastPage: tocPage.lastPage,
@@ -106,6 +108,8 @@ class NarouNovelDetailState {
   const NarouNovelDetailState({
     required this.title,
     required this.authorName,
+    required this.summary,
+    required this.infoFields,
     required this.items,
     required this.currentPage,
     required this.lastPage,
@@ -116,6 +120,8 @@ class NarouNovelDetailState {
 
   final String title;
   final String authorName;
+  final String summary;
+  final Map<String, String> infoFields;
   final List<NarouNovelDetailListItem> items;
   final int currentPage;
   final int lastPage;
@@ -128,6 +134,8 @@ class NarouNovelDetailState {
   NarouNovelDetailState copyWith({
     String? title,
     String? authorName,
+    String? summary,
+    Map<String, String>? infoFields,
     List<NarouNovelDetailListItem>? items,
     int? currentPage,
     int? lastPage,
@@ -139,6 +147,8 @@ class NarouNovelDetailState {
     return NarouNovelDetailState(
       title: title ?? this.title,
       authorName: authorName ?? this.authorName,
+      summary: summary ?? this.summary,
+      infoFields: infoFields ?? this.infoFields,
       items: items ?? this.items,
       currentPage: currentPage ?? this.currentPage,
       lastPage: lastPage ?? this.lastPage,
