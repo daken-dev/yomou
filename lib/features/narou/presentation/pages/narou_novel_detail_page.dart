@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:yomou/features/downloads/application/download_providers.dart';
+import 'package:yomou/features/downloads/domain/entities/saved_novel_overview.dart';
 import 'package:yomou/features/narou/application/narou_novel_detail_controller.dart';
 import 'package:yomou/features/navigation/presentation/widgets/app_scaffold.dart';
+import 'package:yomou/features/novels/domain/entities/novel_site.dart';
 
 class NarouNovelDetailPage extends ConsumerWidget {
   const NarouNovelDetailPage({super.key, required this.novelId});
@@ -12,9 +15,21 @@ class NarouNovelDetailPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final detail = ref.watch(narouNovelDetailControllerProvider(novelId));
+    final savedNovel = ref
+        .watch(savedNovelsProvider)
+        .value
+        ?.where((item) => item.site == NovelSite.narou && item.id == novelId)
+        .firstOrNull;
 
     return AppScaffold(
       title: '作品',
+      floatingActionButton: savedNovel == null || !savedNovel.hasResumeTarget
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () => context.push(_resumeLocation(savedNovel)),
+              label: Text(_resumeLabel(savedNovel)),
+              icon: const Icon(Icons.play_arrow),
+            ),
       body: detail.when(
         loading: () => const Center(child: Text('Loading...')),
         error: (error, stackTrace) => ListView(
@@ -112,5 +127,27 @@ class NarouNovelDetailPage extends ConsumerWidget {
       return 1;
     }
     return 0;
+  }
+
+  String _resumeLocation(SavedNovelOverview novel) {
+    final queryParameters = <String, String>{};
+    if (novel.hasResumePageProgress) {
+      queryParameters['resumePage'] = novel.resumePageNumber.toString();
+      queryParameters['resumePageCount'] = novel.resumePageCount.toString();
+    }
+
+    final uri = Uri(
+      path: '/narou/novel/$novelId/episode/${novel.resumeEpisodeNo}',
+      queryParameters: queryParameters.isEmpty ? null : queryParameters,
+    );
+    return uri.toString();
+  }
+
+  String _resumeLabel(SavedNovelOverview novel) {
+    final episode = '第${novel.resumeEpisodeNo}話から再開';
+    if (!novel.hasResumePageProgress) {
+      return episode;
+    }
+    return '$episode ${novel.resumePageNumber}/${novel.resumePageCount}';
   }
 }

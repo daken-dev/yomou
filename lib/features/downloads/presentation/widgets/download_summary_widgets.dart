@@ -18,7 +18,9 @@ class SavedNovelTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final subtitle = <String>[
       '状態: ${novel.state.displayName}',
+      '残り: ${novel.remainingEpisodes}話',
       '各話: ${novel.downloadedEpisodes}/${novel.totalEpisodes}',
+      if (novel.hasResumeTarget) '再開: ${_formatResumeLabel(novel)}',
       if (novel.activeRunningJobs > 0 || novel.activeQueuedJobs > 0)
         'ジョブ: 実行中 ${novel.activeRunningJobs} / 待機 ${novel.activeQueuedJobs}',
       if (novel.lockReason case final lockReason?) 'ロック: $lockReason',
@@ -73,4 +75,12 @@ String _formatDateTime(DateTime value) {
   final minute = local.minute.toString().padLeft(2, '0');
   final second = local.second.toString().padLeft(2, '0');
   return '$year-$month-$day $hour:$minute:$second';
+}
+
+String _formatResumeLabel(SavedNovelOverview novel) {
+  final episode = '第${novel.resumeEpisodeNo}話';
+  if (!novel.hasResumePageProgress) {
+    return episode;
+  }
+  return '$episode ${novel.resumePageNumber}/${novel.resumePageCount}';
 }

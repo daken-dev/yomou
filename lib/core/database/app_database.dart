@@ -88,8 +88,22 @@ class AppDatabase {
   void _initialize(sqlite.Database database) {
     database.execute('PRAGMA foreign_keys = ON');
     database.execute('PRAGMA journal_mode = WAL');
-    database.execute('PRAGMA user_version = 1');
+    final currentVersion =
+        database.select('PRAGMA user_version').first.columnAt(0) as int;
 
+    if (currentVersion == 0) {
+      _createSchema(database);
+      database.execute('PRAGMA user_version = 2');
+      return;
+    }
+
+    if (currentVersion < 2) {
+      _migrateToV2(database);
+      database.execute('PRAGMA user_version = 2');
+    }
+  }
+
+  void _createSchema(sqlite.Database database) {
     database.execute('''
       CREATE TABLE IF NOT EXISTS saved_novels (
         site TEXT NOT NULL,
@@ -191,12 +205,25 @@ class AppDatabase {
         novel_id TEXT NOT NULL,
         episode_no INTEGER NOT NULL DEFAULT 1,
         scroll_offset REAL NOT NULL DEFAULT 0,
+        page_number INTEGER NOT NULL DEFAULT 1,
+        page_count INTEGER NOT NULL DEFAULT 0,
         updated_at TEXT NOT NULL,
         PRIMARY KEY (site, novel_id),
         FOREIGN KEY (site, novel_id)
           REFERENCES saved_novels(site, novel_id)
           ON DELETE CASCADE
       )
+    ''');
+  }
+
+  void _migrateToV2(sqlite.Database database) {
+    database.execute('''
+      ALTER TABLE novel_bookmarks
+      ADD COLUMN page_number INTEGER NOT NULL DEFAULT 1
+    ''');
+    database.execute('''
+      ALTER TABLE novel_bookmarks
+      ADD COLUMN page_count INTEGER NOT NULL DEFAULT 0
     ''');
   }
 }

@@ -42,6 +42,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           novelId: state.pathParameters['id'] ?? '',
           episodeNo: int.tryParse(state.pathParameters['episodeNo'] ?? '') ?? 1,
           episodeUrl: state.uri.queryParameters['url'],
+          resumePage: int.tryParse(
+            state.uri.queryParameters['resumePage'] ?? '',
+          ),
+          resumePageCount: int.tryParse(
+            state.uri.queryParameters['resumePageCount'] ?? '',
+          ),
         ),
       ),
       GoRoute(

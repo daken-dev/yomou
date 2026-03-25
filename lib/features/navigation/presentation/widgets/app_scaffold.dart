@@ -7,11 +7,13 @@ class AppScaffold extends StatelessWidget {
     required this.title,
     required this.body,
     this.actions,
+    this.floatingActionButton,
   });
 
   final String title;
   final Widget body;
   final List<Widget>? actions;
+  final Widget? floatingActionButton;
 
   @override
   Widget build(BuildContext context) {
@@ -19,6 +21,7 @@ class AppScaffold extends StatelessWidget {
       appBar: AppBar(title: Text(title), actions: actions),
       drawer: const AppDrawer(),
       body: SafeArea(child: body),
+      floatingActionButton: floatingActionButton,
     );
   }
 }

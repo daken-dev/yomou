@@ -58,8 +58,10 @@ class DownloadStore {
           novel_id,
           episode_no,
           scroll_offset,
+          page_number,
+          page_count,
           updated_at
-        ) VALUES (?, ?, 1, 0, ?)
+        ) VALUES (?, ?, 1, 0, 1, 0, ?)
         ''',
         <Object?>[novel.site.name, novel.id, now],
       );
@@ -112,6 +114,8 @@ class DownloadStore {
           s.site,
           s.novel_id,
           s.title,
+          s.created_at,
+          s.updated_at,
           s.total_episodes,
           s.update_locked,
           s.lock_reason,
@@ -119,6 +123,11 @@ class DownloadStore {
           s.last_checked_at,
           s.last_synced_at,
           s.next_refresh_at,
+          COALESCE(b.episode_no, 1) AS resume_episode_no,
+          COALESCE(b.page_number, 1) AS resume_page_number,
+          COALESCE(b.page_count, 0) AS resume_page_count,
+          MAX(s.total_episodes - COALESCE(b.episode_no, 1) + 1, 0)
+            AS remaining_episodes,
           (
             SELECT COUNT(*)
             FROM novel_episodes e
@@ -141,10 +150,104 @@ class DownloadStore {
               AND j.status = 'running'
           ) AS running_jobs
         FROM saved_novels s
+        LEFT JOIN novel_bookmarks b
+          ON b.site = s.site
+         AND b.novel_id = s.novel_id
         ORDER BY s.updated_at DESC, s.created_at DESC
       ''');
 
       return rows.map(_savedNovelOverviewFromRow).toList(growable: false);
+    });
+  }
+
+  Future<bool> saveReadingProgress({
+    required NovelSite site,
+    required String novelId,
+    required int episodeNo,
+    required int pageNumber,
+    required int pageCount,
+    int? nextEpisodeNo,
+  }) async {
+    return _database.write((db) {
+      final savedRows = db.select(
+        '''
+        SELECT 1
+        FROM saved_novels
+        WHERE site = ?
+          AND novel_id = ?
+        LIMIT 1
+        ''',
+        <Object?>[site.name, novelId],
+      );
+      if (savedRows.isEmpty) {
+        return false;
+      }
+
+      final normalizedEpisodeNo = episodeNo < 1 ? 1 : episodeNo;
+      final normalizedPageCount = pageCount < 0 ? 0 : pageCount;
+      final normalizedPageNumber = normalizedPageCount <= 0
+          ? 1
+          : pageNumber.clamp(1, normalizedPageCount);
+      final isCompletedEpisode =
+          normalizedPageCount > 0 &&
+          normalizedPageNumber >= normalizedPageCount;
+      final resumeEpisodeNo = isCompletedEpisode
+          ? (nextEpisodeNo ?? normalizedEpisodeNo + 1)
+          : normalizedEpisodeNo;
+      final resumePageNumber = isCompletedEpisode ? 1 : normalizedPageNumber;
+      final resumePageCount = isCompletedEpisode ? 0 : normalizedPageCount;
+
+      final bookmarkRows = db.select(
+        '''
+        SELECT episode_no, page_number, page_count
+        FROM novel_bookmarks
+        WHERE site = ?
+          AND novel_id = ?
+        LIMIT 1
+        ''',
+        <Object?>[site.name, novelId],
+      );
+      if (bookmarkRows.isNotEmpty) {
+        final row = bookmarkRows.first;
+        final currentEpisodeNo = _intValue(row['episode_no']);
+        final currentPageNumber = _intValue(row['page_number']);
+        final currentPageCount = _intValue(row['page_count']);
+        if (currentEpisodeNo == resumeEpisodeNo &&
+            currentPageNumber == resumePageNumber &&
+            currentPageCount == resumePageCount) {
+          return true;
+        }
+      }
+
+      final now = _isoNow();
+      db.execute(
+        '''
+        INSERT INTO novel_bookmarks (
+          site,
+          novel_id,
+          episode_no,
+          scroll_offset,
+          page_number,
+          page_count,
+          updated_at
+        ) VALUES (?, ?, ?, 0, ?, ?, ?)
+        ON CONFLICT(site, novel_id) DO UPDATE SET
+          episode_no = excluded.episode_no,
+          scroll_offset = 0,
+          page_number = excluded.page_number,
+          page_count = excluded.page_count,
+          updated_at = excluded.updated_at
+        ''',
+        <Object?>[
+          site.name,
+          novelId,
+          resumeEpisodeNo,
+          resumePageNumber,
+          resumePageCount,
+          now,
+        ],
+      );
+      return true;
     });
   }
 
@@ -569,7 +672,8 @@ class DownloadStore {
       }
 
       final bookmarkEpisode = _bookmarkEpisode(db, site.name, novelId);
-      if (fetchedEpisodeCount > 0 && bookmarkEpisode > fetchedEpisodeCount) {
+      final maxBookmarkEpisode = fetchedEpisodeCount + 1;
+      if (fetchedEpisodeCount > 0 && bookmarkEpisode > maxBookmarkEpisode) {
         db.execute(
           '''
           UPDATE novel_bookmarks
@@ -578,7 +682,7 @@ class DownloadStore {
           WHERE site = ?
             AND novel_id = ?
           ''',
-          <Object?>[fetchedEpisodeCount, now, site.name, novelId],
+          <Object?>[maxBookmarkEpisode, now, site.name, novelId],
         );
       }
 
@@ -849,6 +953,12 @@ class DownloadStore {
       downloadedEpisodes: downloadedEpisodes,
       activeQueuedJobs: queuedJobs,
       activeRunningJobs: runningJobs,
+      remainingEpisodes: _intValue(row['remaining_episodes']),
+      resumeEpisodeNo: _intValue(row['resume_episode_no']),
+      resumePageNumber: _intValue(row['resume_page_number']),
+      resumePageCount: _intValue(row['resume_page_count']),
+      createdAt: DateTime.parse(row['created_at']! as String),
+      updatedAt: DateTime.parse(row['updated_at']! as String),
       lastError: lastError,
       lockReason: row['lock_reason'] as String?,
       nextRefreshAt: _dateTimeOrNull(row['next_refresh_at']),

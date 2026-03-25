@@ -25,6 +25,12 @@ class SavedNovelOverview {
     required this.downloadedEpisodes,
     required this.activeQueuedJobs,
     required this.activeRunningJobs,
+    required this.remainingEpisodes,
+    required this.resumeEpisodeNo,
+    required this.resumePageNumber,
+    required this.resumePageCount,
+    required this.createdAt,
+    required this.updatedAt,
     this.lastError,
     this.lockReason,
     this.nextRefreshAt,
@@ -40,6 +46,12 @@ class SavedNovelOverview {
   final int downloadedEpisodes;
   final int activeQueuedJobs;
   final int activeRunningJobs;
+  final int remainingEpisodes;
+  final int resumeEpisodeNo;
+  final int resumePageNumber;
+  final int resumePageCount;
+  final DateTime createdAt;
+  final DateTime updatedAt;
   final String? lastError;
   final String? lockReason;
   final DateTime? nextRefreshAt;
@@ -47,4 +59,8 @@ class SavedNovelOverview {
   final DateTime? lastSyncedAt;
 
   bool get isSaved => true;
+
+  bool get hasResumeTarget => totalEpisodes > 0 && remainingEpisodes > 0;
+
+  bool get hasResumePageProgress => hasResumeTarget && resumePageCount > 0;
 }

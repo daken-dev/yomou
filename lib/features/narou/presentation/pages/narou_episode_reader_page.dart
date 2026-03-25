@@ -6,8 +6,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kumihan/kumihan.dart';
+import 'package:yomou/features/downloads/application/download_providers.dart';
 import 'package:yomou/features/narou/application/narou_episode_reader_controller.dart';
 import 'package:yomou/features/narou/data/narou_episode_image_cache.dart';
+import 'package:yomou/features/novels/domain/entities/novel_site.dart';
 
 class NarouEpisodeReaderPage extends ConsumerStatefulWidget {
   const NarouEpisodeReaderPage({
@@ -15,11 +17,15 @@ class NarouEpisodeReaderPage extends ConsumerStatefulWidget {
     required this.novelId,
     required this.episodeNo,
     this.episodeUrl,
+    this.resumePage,
+    this.resumePageCount,
   });
 
   final String novelId;
   final int episodeNo;
   final String? episodeUrl;
+  final int? resumePage;
+  final int? resumePageCount;
 
   @override
   ConsumerState<NarouEpisodeReaderPage> createState() =>
@@ -35,17 +41,29 @@ class _NarouEpisodeReaderPageState
   var _controlsVisible = false;
   var _nextStartPosition = _EpisodeStartPosition.firstPage;
   NarouEpisodeReaderData? _latestData;
+  _PendingRestorePosition? _pendingRestorePosition;
+  Timer? _saveProgressDebounce;
 
   @override
   void initState() {
     super.initState();
     _currentEpisodeNo = widget.episodeNo;
     _currentEpisodeUrl = widget.episodeUrl;
+    if (widget.resumePage != null &&
+        widget.resumePageCount != null &&
+        widget.resumePage! > 0 &&
+        widget.resumePageCount! > 0) {
+      _pendingRestorePosition = _PendingRestorePosition(
+        pageNumber: widget.resumePage!,
+        pageCount: widget.resumePageCount!,
+      );
+    }
     _applyFullscreenMode();
   }
 
   @override
   void dispose() {
+    _saveProgressDebounce?.cancel();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
   }
@@ -124,6 +142,8 @@ class _NarouEpisodeReaderPageState
               textColor: Color(0xFF2A241C),
             ),
             tapHandler: _handleTap,
+            onSnapshotChanged: (snapshot) =>
+                _handleSnapshotChanged(data: data, snapshot: snapshot),
           ),
         ),
         Positioned.fill(
@@ -367,12 +387,14 @@ class _NarouEpisodeReaderPageState
     required String? episodeUrl,
     required _EpisodeStartPosition startPosition,
   }) {
+    _saveProgressDebounce?.cancel();
     setState(() {
       _currentEpisodeNo = episodeNo;
       _currentEpisodeUrl = episodeUrl;
       _controlsVisible = false;
       _nextStartPosition = startPosition;
       _latestData = null;
+      _pendingRestorePosition = null;
     });
     _applyFullscreenMode();
   }
@@ -390,6 +412,88 @@ class _NarouEpisodeReaderPageState
         : SystemUiMode.immersiveSticky;
     SystemChrome.setEnabledSystemUIMode(mode);
   }
+
+  void _handleSnapshotChanged({
+    required NarouEpisodeReaderData data,
+    required KumihanSnapshot snapshot,
+  }) {
+    if (snapshot.totalPages <= 0) {
+      return;
+    }
+
+    final pendingRestorePosition = _pendingRestorePosition;
+    if (pendingRestorePosition != null) {
+      _pendingRestorePosition = null;
+      final targetPage = _restorePageNumber(
+        savedPageNumber: pendingRestorePosition.pageNumber,
+        savedPageCount: pendingRestorePosition.pageCount,
+        currentPageCount: snapshot.totalPages,
+      );
+      final targetPageIndex = targetPage - 1;
+      if (snapshot.currentPage != targetPageIndex) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) {
+            return;
+          }
+          unawaited(_kumihanController.showPage(targetPageIndex));
+        });
+        return;
+      }
+    }
+
+    _scheduleProgressSave(data: data, snapshot: snapshot);
+  }
+
+  void _scheduleProgressSave({
+    required NarouEpisodeReaderData data,
+    required KumihanSnapshot snapshot,
+  }) {
+    _saveProgressDebounce?.cancel();
+    final episodeNo = _currentEpisodeNo;
+    final pageNumber = snapshot.currentPage + 1;
+    final pageCount = snapshot.totalPages;
+    final nextEpisodeNo = data.nextEpisodeNo;
+    _saveProgressDebounce = Timer(const Duration(milliseconds: 250), () {
+      unawaited(
+        ref
+            .read(downloadStoreProvider)
+            .saveReadingProgress(
+              site: NovelSite.narou,
+              novelId: widget.novelId,
+              episodeNo: episodeNo,
+              pageNumber: pageNumber,
+              pageCount: pageCount,
+              nextEpisodeNo: nextEpisodeNo,
+            ),
+      );
+    });
+  }
+
+  int _restorePageNumber({
+    required int savedPageNumber,
+    required int savedPageCount,
+    required int currentPageCount,
+  }) {
+    if (savedPageCount <= 0 || currentPageCount <= 0) {
+      return 1;
+    }
+
+    final completedPages = savedPageNumber - 1;
+    final safeCompletedPages =
+        (completedPages * currentPageCount) ~/ savedPageCount;
+    final restoredPage = safeCompletedPages + 1;
+    return restoredPage.clamp(1, currentPageCount);
+  }
 }
 
 enum _EpisodeStartPosition { firstPage, lastPage }
+
+class _PendingRestorePosition {
+  const _PendingRestorePosition({
+    required this.pageNumber,
+    required this.pageCount,
+  });
+
+  final int pageNumber;
+  final int pageCount;
+}
