@@ -18,7 +18,7 @@ class YomouApp extends ConsumerWidget {
     };
 
     return MaterialApp.router(
-      title: 'yomou',
+      title: 'よもう',
       routerConfig: ref.watch(appRouterProvider),
       themeMode: settings.themeMode.themeMode,
       theme: ThemeData(
