@@ -270,12 +270,12 @@ class AozoraIndexStore {
   String _whereClauseForTarget(NovelSearchTarget target) {
     return switch (target) {
       NovelSearchTarget.title =>
-        '(title LIKE ? ESCAPE "\\" OR IFNULL(subtitle, "") LIKE ? ESCAPE "\\")',
-      NovelSearchTarget.author => 'author_name LIKE ? ESCAPE "\\"',
-      NovelSearchTarget.story => '(title LIKE ? ESCAPE "\\")',
-      NovelSearchTarget.keyword => '(title LIKE ? ESCAPE "\\")',
+        "(title LIKE ? ESCAPE '\\' OR IFNULL(subtitle, '') LIKE ? ESCAPE '\\')",
+      NovelSearchTarget.author => "author_name LIKE ? ESCAPE '\\'",
+      NovelSearchTarget.story => "(title LIKE ? ESCAPE '\\')",
+      NovelSearchTarget.keyword => "(title LIKE ? ESCAPE '\\')",
       NovelSearchTarget.all =>
-        '(title LIKE ? ESCAPE "\\" OR IFNULL(subtitle, "") LIKE ? ESCAPE "\\" OR author_name LIKE ? ESCAPE "\\")',
+        "(title LIKE ? ESCAPE '\\' OR IFNULL(subtitle, '') LIKE ? ESCAPE '\\' OR author_name LIKE ? ESCAPE '\\')",
     };
   }
 
