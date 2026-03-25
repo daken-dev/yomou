@@ -35,12 +35,7 @@ class DownloadStatusPage extends ConsumerWidget {
             if (data.savedNovels.isEmpty)
               const ListTile(title: Text('保存済み作品はありません。')),
             for (final novel in data.savedNovels)
-              SavedNovelTile(
-                novel: novel,
-                onRefresh: () => ref
-                    .read(downloadSchedulerProvider)
-                    .refreshNovel(novel.site, novel.id),
-              ),
+              SavedNovelTile(novel: novel),
             const Divider(height: 1),
             const ListTile(title: Text('最近のジョブ')),
             if (data.recentJobs.isEmpty)

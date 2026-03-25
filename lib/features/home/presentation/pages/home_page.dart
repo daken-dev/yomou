@@ -51,22 +51,33 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
             Expanded(
               child: items.isEmpty
-                  ? ListView(
-                      children: const [ListTile(title: Text('保存済み作品はありません。'))],
+                  ? const Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.library_books_outlined, size: 48),
+                          SizedBox(height: 12),
+                          Text('保存済み作品はありません'),
+                        ],
+                      ),
                     )
-                  : ListView(
-                      children: [
-                        for (final item in _sortItems(items))
-                          SavedNovelTile(
-                            novel: item,
-                            onTap: () => context.push(
-                              _savedNovelLocation(item.site, item.id),
-                            ),
-                            onRefresh: () => ref
-                                .read(downloadSchedulerProvider)
-                                .refreshNovel(item.site, item.id),
-                          ),
-                      ],
+                  : Builder(
+                      builder: (context) {
+                        final sorted = _sortItems(items);
+                        return ListView.builder(
+                          padding: const EdgeInsets.only(top: 4, bottom: 16),
+                          itemCount: sorted.length,
+                          itemBuilder: (context, index) {
+                            final item = sorted[index];
+                            return SavedNovelTile(
+                              novel: item,
+                              onTap: () => context.push(
+                                _savedNovelLocation(item.site, item.id),
+                              ),
+                            );
+                          },
+                        );
+                      },
                     ),
             ),
           ],
@@ -144,38 +155,54 @@ class _SortControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Column(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      child: Row(
         children: [
-          DropdownButtonFormField<HomeNovelSortKey>(
-            initialValue: sortKey,
-            decoration: const InputDecoration(labelText: '並べ替え'),
-            items: HomeNovelSortKey.values
-                .map(
-                  (value) => DropdownMenuItem<HomeNovelSortKey>(
-                    value: value,
-                    child: Text(value.label),
-                  ),
-                )
-                .toList(growable: false),
-            onChanged: (value) {
-              if (value != null) {
-                onSortKeyChanged(value);
-              }
-            },
+          // Sort key selector as segmented button
+          Expanded(
+            child: SegmentedButton<HomeNovelSortKey>(
+              segments: HomeNovelSortKey.values
+                  .map(
+                    (value) => ButtonSegment<HomeNovelSortKey>(
+                      value: value,
+                      label: Text(value.label, style: const TextStyle(fontSize: 11)),
+                    ),
+                  )
+                  .toList(growable: false),
+              selected: {sortKey},
+              onSelectionChanged: (value) => onSortKeyChanged(value.first),
+              style: const ButtonStyle(
+                visualDensity: VisualDensity.compact,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
           ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('ソート逆転'),
-            value: sortDescending,
-            onChanged: onSortDescendingChanged,
+          const SizedBox(width: 4),
+          // Sort direction toggle
+          IconButton(
+            onPressed: () => onSortDescendingChanged(!sortDescending),
+            icon: Icon(
+              sortDescending ? Icons.arrow_downward : Icons.arrow_upward,
+              size: 20,
+            ),
+            tooltip: sortDescending ? '降順' : '昇順',
+            visualDensity: VisualDensity.compact,
           ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('残り0を最後尾に'),
-            value: remainingZeroToEnd,
-            onChanged: onRemainingZeroToEndChanged,
+          // Zero remaining to end toggle
+          IconButton(
+            onPressed: () => onRemainingZeroToEndChanged(!remainingZeroToEnd),
+            icon: Icon(
+              remainingZeroToEnd
+                  ? Icons.check_circle_rounded
+                  : Icons.check_circle_outline_rounded,
+              size: 20,
+              color: remainingZeroToEnd ? colorScheme.primary : null,
+            ),
+            tooltip: '読了を最後尾に',
+            visualDensity: VisualDensity.compact,
           ),
         ],
       ),

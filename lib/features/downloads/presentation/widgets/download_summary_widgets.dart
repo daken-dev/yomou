@@ -2,40 +2,342 @@ import 'package:flutter/material.dart';
 import 'package:yomou/features/downloads/domain/entities/download_job_overview.dart';
 import 'package:yomou/features/downloads/domain/entities/saved_novel_overview.dart';
 
+enum _NovelMenuAction { episodes, resume, refresh, remove }
+
 class SavedNovelTile extends StatelessWidget {
   const SavedNovelTile({
     super.key,
     required this.novel,
-    required this.onRefresh,
     this.onTap,
   });
 
   final SavedNovelOverview novel;
-  final VoidCallback onRefresh;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final subtitle = <String>[
-      '状態: ${novel.state.displayName}',
-      '残り: ${novel.remainingEpisodes}話',
-      '各話: ${novel.downloadedEpisodes}/${novel.totalEpisodes}',
-      if (novel.hasResumeTarget) '再開: ${_formatResumeLabel(novel)}',
-      if (novel.activeRunningJobs > 0 || novel.activeQueuedJobs > 0)
-        'ジョブ: 実行中 ${novel.activeRunningJobs} / 待機 ${novel.activeQueuedJobs}',
-      if (novel.lockReason case final lockReason?) 'ロック: $lockReason',
-      if (novel.lastError case final lastError?) 'エラー: $lastError',
-      if (novel.lastCheckedAt case final lastCheckedAt?)
-        '確認: ${_formatDateTime(lastCheckedAt)}',
-      if (novel.lastSyncedAt case final lastSyncedAt?)
-        '完了: ${_formatDateTime(lastSyncedAt)}',
-    ];
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
-    return ListTile(
-      onTap: onTap,
-      title: Text(novel.title),
-      subtitle: Text(subtitle.join('\n')),
-      trailing: TextButton(onPressed: onRefresh, child: const Text('更新')),
+    final isSyncing =
+        novel.state == SavedNovelSyncState.running ||
+        novel.state == SavedNovelSyncState.queued;
+    final hasError =
+        novel.state == SavedNovelSyncState.error || novel.lastError != null;
+    final isComplete = novel.remainingEpisodes == 0 && novel.totalEpisodes > 0;
+    final hasRemaining = novel.remainingEpisodes > 0;
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        onLongPress: () => _showMenu(context),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 4, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Title row
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      novel.title,
+                      style: theme.textTheme.titleSmall,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (isSyncing)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8),
+                      child: SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: colorScheme.primary,
+                        ),
+                      ),
+                    )
+                  else if (hasError)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8),
+                      child: Tooltip(
+                        message: novel.lastError ?? '同期エラー',
+                        child: Icon(
+                          Icons.warning_amber_rounded,
+                          size: 18,
+                          color: colorScheme.error,
+                        ),
+                      ),
+                    ),
+                  _MenuButton(onSelected: (action) => _onMenuAction(context, action)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              // Info row
+              Row(
+                children: [
+                  // Remaining episodes — prominent display
+                  _EpisodeCount(
+                    remaining: novel.remainingEpisodes,
+                    total: novel.totalEpisodes,
+                    hasRemaining: hasRemaining,
+                    colorScheme: colorScheme,
+                  ),
+                  const SizedBox(width: 12),
+                  _InfoChip(
+                    icon: Icons.update_rounded,
+                    label: _formatRelativeDate(novel.updatedAt),
+                    color: colorScheme.secondary,
+                    colorScheme: colorScheme,
+                  ),
+                ],
+              ),
+              // Progress bar
+              if (novel.totalEpisodes > 0) ...[
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(2),
+                  child: LinearProgressIndicator(
+                    value: novel.downloadedEpisodes / novel.totalEpisodes,
+                    minHeight: 3,
+                    backgroundColor: colorScheme.surfaceContainerHighest,
+                    color: isComplete
+                        ? colorScheme.tertiary
+                        : colorScheme.primary,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showMenu(BuildContext context) {
+    final box = context.findRenderObject() as RenderBox;
+    final offset = box.localToGlobal(Offset.zero);
+    final size = box.size;
+
+    showMenu<_NovelMenuAction>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        offset.dx + size.width,
+        offset.dy,
+        offset.dx + size.width,
+        offset.dy + size.height,
+      ),
+      items: _buildMenuItems(context),
+    ).then((action) {
+      if (action == null) return;
+      if (!context.mounted) return;
+      _onMenuAction(context, action);
+    });
+  }
+
+  List<PopupMenuEntry<_NovelMenuAction>> _buildMenuItems(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return [
+      const PopupMenuItem(
+        value: _NovelMenuAction.episodes,
+        child: ListTile(
+          leading: Icon(Icons.list_rounded),
+          title: Text('エピソード一覧'),
+          dense: true,
+          contentPadding: EdgeInsets.zero,
+        ),
+      ),
+      if (novel.hasResumeTarget)
+        PopupMenuItem(
+          value: _NovelMenuAction.resume,
+          child: ListTile(
+            leading: const Icon(Icons.auto_stories_rounded),
+            title: Text('第${novel.resumeEpisodeNo}話から読む'),
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+      const PopupMenuDivider(),
+      const PopupMenuItem(
+        value: _NovelMenuAction.refresh,
+        child: ListTile(
+          leading: Icon(Icons.refresh_rounded),
+          title: Text('更新を確認'),
+          dense: true,
+          contentPadding: EdgeInsets.zero,
+        ),
+      ),
+      PopupMenuItem(
+        value: _NovelMenuAction.remove,
+        child: ListTile(
+          leading: Icon(Icons.delete_outline_rounded, color: colorScheme.error),
+          title: Text('保存を解除', style: TextStyle(color: colorScheme.error)),
+          dense: true,
+          contentPadding: EdgeInsets.zero,
+        ),
+      ),
+    ];
+  }
+
+  void _onMenuAction(BuildContext context, _NovelMenuAction action) {
+    switch (action) {
+      case _NovelMenuAction.episodes:
+        // TODO: エピソード一覧画面へ遷移
+        break;
+      case _NovelMenuAction.resume:
+        // TODO: しおり位置でリーダーを開く
+        break;
+      case _NovelMenuAction.refresh:
+        // TODO: 更新を実行
+        break;
+      case _NovelMenuAction.remove:
+        // TODO: 保存解除（確認ダイアログ付き）
+        break;
+    }
+  }
+}
+
+class _MenuButton extends StatelessWidget {
+  const _MenuButton({required this.onSelected});
+
+  final ValueChanged<_NovelMenuAction> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<_NovelMenuAction>(
+      onSelected: onSelected,
+      icon: const Icon(Icons.more_vert, size: 20),
+      padding: EdgeInsets.zero,
+      tooltip: 'メニュー',
+      itemBuilder: (_) => _buildItems(context),
+    );
+  }
+
+  List<PopupMenuEntry<_NovelMenuAction>> _buildItems(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return [
+      const PopupMenuItem(
+        value: _NovelMenuAction.episodes,
+        child: ListTile(
+          leading: Icon(Icons.list_rounded),
+          title: Text('エピソード一覧'),
+          dense: true,
+          contentPadding: EdgeInsets.zero,
+        ),
+      ),
+      const PopupMenuItem(
+        value: _NovelMenuAction.resume,
+        child: ListTile(
+          leading: Icon(Icons.auto_stories_rounded),
+          title: Text('続きを読む'),
+          dense: true,
+          contentPadding: EdgeInsets.zero,
+        ),
+      ),
+      const PopupMenuDivider(),
+      const PopupMenuItem(
+        value: _NovelMenuAction.refresh,
+        child: ListTile(
+          leading: Icon(Icons.refresh_rounded),
+          title: Text('更新を確認'),
+          dense: true,
+          contentPadding: EdgeInsets.zero,
+        ),
+      ),
+      PopupMenuItem(
+        value: _NovelMenuAction.remove,
+        child: ListTile(
+          leading: Icon(Icons.delete_outline_rounded, color: colorScheme.error),
+          title: Text('保存を解除', style: TextStyle(color: colorScheme.error)),
+          dense: true,
+          contentPadding: EdgeInsets.zero,
+        ),
+      ),
+    ];
+  }
+}
+
+class _EpisodeCount extends StatelessWidget {
+  const _EpisodeCount({
+    required this.remaining,
+    required this.total,
+    required this.hasRemaining,
+    required this.colorScheme,
+  });
+
+  final int remaining;
+  final int total;
+  final bool hasRemaining;
+  final ColorScheme colorScheme;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          Icons.menu_book_rounded,
+          size: 14,
+          color: hasRemaining ? colorScheme.primary : colorScheme.onSurfaceVariant,
+        ),
+        const SizedBox(width: 4),
+        Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(
+                text: '残り$remaining',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: hasRemaining ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                  fontWeight: hasRemaining ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+              TextSpan(
+                text: '/$total話',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  const _InfoChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.colorScheme,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final ColorScheme colorScheme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -66,6 +368,20 @@ class DownloadJobTile extends StatelessWidget {
   }
 }
 
+String _formatRelativeDate(DateTime value) {
+  final now = DateTime.now();
+  final local = value.toLocal();
+  final diff = now.difference(local);
+
+  if (diff.inMinutes < 1) return 'たった今';
+  if (diff.inMinutes < 60) return '${diff.inMinutes}分前';
+  if (diff.inHours < 24) return '${diff.inHours}時間前';
+  if (diff.inDays < 7) return '${diff.inDays}日前';
+  if (diff.inDays < 30) return '${(diff.inDays / 7).floor()}週間前';
+  if (diff.inDays < 365) return '${(diff.inDays / 30).floor()}ヶ月前';
+  return '${(diff.inDays / 365).floor()}年前';
+}
+
 String _formatDateTime(DateTime value) {
   final local = value.toLocal();
   final year = local.year.toString().padLeft(4, '0');
@@ -77,10 +393,3 @@ String _formatDateTime(DateTime value) {
   return '$year-$month-$day $hour:$minute:$second';
 }
 
-String _formatResumeLabel(SavedNovelOverview novel) {
-  final episode = '第${novel.resumeEpisodeNo}話';
-  if (!novel.hasResumePageProgress) {
-    return episode;
-  }
-  return '$episode ${novel.resumePageNumber}/${novel.resumePageCount}';
-}
