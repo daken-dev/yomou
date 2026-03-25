@@ -40,6 +40,8 @@ class _AozoraSearchPageState extends ConsumerState<AozoraSearchPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final indexState = ref.watch(aozoraIndexControllerProvider);
 
     final current = indexState.value;
@@ -55,57 +57,116 @@ class _AozoraSearchPageState extends ConsumerState<AozoraSearchPage> {
 
     return AppScaffold(
       title: '青空文庫検索',
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          TextField(
-            controller: _queryController,
-            decoration: const InputDecoration(
-              labelText: '作品名や著者名で検索',
-              prefixIcon: Icon(Icons.search),
-              border: OutlineInputBorder(),
+      body: GestureDetector(
+        onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+        behavior: HitTestBehavior.opaque,
+        child: ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+          children: [
+            // Search text field
+            TextField(
+              controller: _queryController,
+              decoration: InputDecoration(
+                filled: true,
+                fillColor:
+                    colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: colorScheme.primary, width: 2),
+                ),
+                prefixIcon: Icon(
+                  Icons.search_rounded,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                suffixIcon: ListenableBuilder(
+                  listenable: _queryController,
+                  builder: (context, _) {
+                    if (_queryController.text.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
+                    return IconButton(
+                      icon: const Icon(Icons.clear_rounded, size: 20),
+                      onPressed: () => _queryController.clear(),
+                    );
+                  },
+                ),
+                hintText: '作品名や著者名で検索',
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+              ),
+              textInputAction: TextInputAction.search,
+              onSubmitted: (_) => _submit(),
             ),
-            textInputAction: TextInputAction.search,
-            onSubmitted: (_) => _submit(),
-          ),
-          const SizedBox(height: 16),
-          SegmentedButton<NovelSearchTarget>(
-            segments: [
-              for (final target in NovelSearchTargetX.selectableValues)
-                if (_targets.contains(target))
-                  ButtonSegment(value: target, label: Text(target.label)),
-            ],
-            selected: {_target},
-            onSelectionChanged: (selected) {
-              setState(() {
-                _target = selected.first;
-              });
-            },
-            showSelectedIcon: false,
-          ),
-          const SizedBox(height: 16),
-          indexState.when(
-            data: (state) => Text(
-              state.status.hasIndex
-                  ? 'インデックス: ${state.status.totalWorks}件（${_formatDateTime(state.status.fetchedAt!)}）'
-                  : 'インデックス未取得',
+
+            const SizedBox(height: 24),
+
+            // Search target section
+            _SectionLabel(label: '検索範囲', colorScheme: colorScheme),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: SegmentedButton<NovelSearchTarget>(
+                segments: [
+                  for (final target in NovelSearchTargetX.selectableValues)
+                    if (_targets.contains(target))
+                      ButtonSegment(
+                        value: target,
+                        label: Text(
+                          target.label,
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                      ),
+                ],
+                selected: {_target},
+                onSelectionChanged: (selected) {
+                  setState(() {
+                    _target = selected.first;
+                  });
+                },
+                showSelectedIcon: false,
+                style: const ButtonStyle(
+                  visualDensity: VisualDensity.compact,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
             ),
-            error: (error, _) => Text('インデックス状態取得失敗: $error'),
-            loading: () => const Text('インデックス確認中...'),
-          ),
-          const SizedBox(height: 8),
-          OutlinedButton.icon(
-            onPressed: () => _downloadIndex(manual: true),
-            icon: const Icon(Icons.download),
-            label: const Text('一覧をダウンロード/更新'),
-          ),
-          const SizedBox(height: 12),
-          FilledButton.icon(
-            onPressed: _submit,
-            icon: const Icon(Icons.search),
-            label: const Text('検索する'),
-          ),
-        ],
+
+            const SizedBox(height: 24),
+
+            // Index status section
+            _SectionLabel(label: 'インデックス', colorScheme: colorScheme),
+            const SizedBox(height: 8),
+            _IndexStatusCard(
+              indexState: indexState,
+              onDownload: () => _downloadIndex(manual: true),
+            ),
+
+            const SizedBox(height: 32),
+
+            // Search button
+            FilledButton.icon(
+              onPressed: _submit,
+              icon: const Icon(Icons.search_rounded),
+              label: const Text('検索する'),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(double.infinity, 52),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -145,7 +206,12 @@ class _AozoraSearchPageState extends ConsumerState<AozoraSearchPage> {
       }
       if (manual) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('青空文庫インデックスを更新しました。')),
+          SnackBar(
+            content: const Text('青空文庫インデックスを更新しました。'),
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
         );
       }
     } catch (error) {
@@ -153,12 +219,18 @@ class _AozoraSearchPageState extends ConsumerState<AozoraSearchPage> {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('インデックス更新に失敗しました: $error')),
+        SnackBar(
+          content: Text('インデックス更新に失敗しました: $error'),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
       );
     }
   }
 
   void _submit() {
+    FocusManager.instance.primaryFocus?.unfocus();
+
     final request = NovelSearchRequest(
       site: NovelSite.aozora,
       query: _queryController.text,
@@ -172,6 +244,135 @@ class _AozoraSearchPageState extends ConsumerState<AozoraSearchPage> {
     ).toString();
     context.push(location);
   }
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel({required this.label, required this.colorScheme});
+
+  final String label;
+  final ColorScheme colorScheme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label,
+      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+        color: colorScheme.onSurfaceVariant,
+        fontWeight: FontWeight.w600,
+      ),
+    );
+  }
+}
+
+class _IndexStatusCard extends StatelessWidget {
+  const _IndexStatusCard({
+    required this.indexState,
+    required this.onDownload,
+  });
+
+  final AsyncValue<AozoraIndexControllerState> indexState;
+  final VoidCallback onDownload;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Card(
+      elevation: 0,
+      color: colorScheme.surfaceContainerLow,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: indexState.when(
+          data: (state) {
+            final hasIndex = state.status.hasIndex;
+            return Row(
+              children: [
+                Icon(
+                  hasIndex
+                      ? Icons.check_circle_outline_rounded
+                      : Icons.info_outline_rounded,
+                  size: 20,
+                  color: hasIndex ? colorScheme.primary : colorScheme.outline,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        hasIndex
+                            ? '${state.status.totalWorks}件の作品'
+                            : 'インデックス未取得',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (hasIndex && state.status.fetchedAt != null)
+                        Text(
+                          _formatDateTime(state.status.fetchedAt!),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: onDownload,
+                  icon: const Icon(Icons.sync_rounded, size: 18),
+                  label: Text(hasIndex ? '更新' : '取得'),
+                ),
+              ],
+            );
+          },
+          error: (error, _) => Row(
+            children: [
+              Icon(
+                Icons.error_outline_rounded,
+                size: 20,
+                color: colorScheme.error,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  '状態取得に失敗しました',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.error,
+                  ),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: onDownload,
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                label: const Text('再試行'),
+              ),
+            ],
+          ),
+          loading: () => Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: colorScheme.primary,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'インデックス確認中...',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   String _formatDateTime(DateTime value) {
     final local = value.toLocal();
@@ -180,6 +381,6 @@ class _AozoraSearchPageState extends ConsumerState<AozoraSearchPage> {
     final d = local.day.toString().padLeft(2, '0');
     final hh = local.hour.toString().padLeft(2, '0');
     final mm = local.minute.toString().padLeft(2, '0');
-    return '$y/$m/$d $hh:$mm';
+    return '$y/$m/$d $hh:$mm 更新';
   }
 }

@@ -12,11 +12,14 @@ class AozoraSearchResultsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return AppScaffold(
       title: '青空文庫検索結果',
       actions: [
         IconButton(
-          icon: const Icon(Icons.search),
+          icon: const Icon(Icons.search_rounded),
           onPressed: () => context.push('/aozora/search'),
           tooltip: '検索条件を変更',
         ),
@@ -25,12 +28,50 @@ class AozoraSearchResultsPage extends StatelessWidget {
         children: [
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-            color: Theme.of(context).colorScheme.surfaceContainerLow,
-            child: Text(
-              request.hasQuery
-                  ? '「${request.normalizedQuery}」(${request.target.label})'
-                  : '全件表示 (${request.target.label})',
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerLow,
+              border: Border(
+                bottom: BorderSide(
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                ),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.search_rounded,
+                  size: 18,
+                  color: colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    request.hasQuery
+                        ? '「${request.normalizedQuery}」'
+                        : '全件表示',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colorScheme.secondaryContainer,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    request.target.label,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: colorScheme.onSecondaryContainer,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           Expanded(

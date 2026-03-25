@@ -1,17 +1,41 @@
-# yomou
+# よもう
 
-A new Flutter project.
+日本のWeb小説・文学作品をまとめて読める小説リーダーアプリです。
 
-## Getting Started
+<p align="center">
+  <img src="screenshots/home.png" alt="ホーム画面" width="300" />
+  <img src="screenshots/reader.png" alt="リーダー画面" width="300" />
+</p>
 
-This project is a starting point for a Flutter application.
+## 対応サイト
 
-A few resources to get you started if this is your first Flutter project:
+- **小説家になろう** — 人気Web小説の検索・ランキング閲覧・作品の保存と読書ができます
+- **青空文庫** — 著作権の切れた日本文学の名作を読むことができます
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+## 主な機能
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+### 作品の検索・発見
+
+- キーワード・ジャンル・作者名などで小説を検索
+- なろうランキング（日間・週間・月間・四半期・年間・累計）を閲覧
+- 新着作品のチェック
+
+### 快適な読書体験
+
+- **縦書き・横書き**の切り替えに対応
+- **フォントサイズ**や**余白**の調整
+- **和紙風テクスチャ**など紙面の色合いを選択可能（白・和紙・ダーク）
+- 横向き時の**見開き表示**
+- タップで直感的にページ送り
+
+### ライブラリ管理
+
+- 気に入った作品を保存してマイライブラリを構築
+- **読書の続き**をワンタップで再開（ページ位置を自動記憶）
+- 残り話数順・追加日順・更新日順などで並べ替え
+- 新しいエピソードの更新チェック
+
+### カスタマイズ
+
+- ダーク・ライトテーマの切り替え
+- リーダーの各種設定（文字サイズ、組方向、タップ領域、紙面の色など）
