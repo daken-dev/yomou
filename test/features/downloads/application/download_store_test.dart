@@ -7,6 +7,35 @@ import 'package:yomou/features/novels/domain/entities/novel_site.dart';
 import 'package:yomou/features/novels/domain/entities/novel_summary.dart';
 
 void main() {
+  test('removeNovel deletes saved novel and cascades related data', () async {
+    final database = AppDatabase(pathProvider: () async => ':memory:');
+    addTearDown(database.dispose);
+
+    final store = DownloadStore(database);
+    const novel = NovelSummary(
+      site: NovelSite.narou,
+      id: 'N0001AA',
+      title: '作品1',
+    );
+
+    await store.saveNovel(novel);
+    await store.enqueueSyncNovel(
+      site: novel.site,
+      novelId: novel.id,
+      priority: 100,
+    );
+
+    expect(await store.hasSavedNovel(novel.site, novel.id), isTrue);
+    expect(await store.listSavedNovelIds(novel.site), {'N0001AA'});
+
+    await store.removeNovel(novel.site, novel.id);
+
+    expect(await store.hasSavedNovel(novel.site, novel.id), isFalse);
+    expect(await store.listSavedNovelIds(novel.site), isEmpty);
+    expect(await store.listSavedNovels(), isEmpty);
+    expect(await store.listRecentJobs(), isEmpty);
+  });
+
   test('applyNovelSync locks updates when episode count decreases', () async {
     final database = AppDatabase(pathProvider: () async => ':memory:');
     addTearDown(database.dispose);

@@ -85,9 +85,14 @@ class RankingItemCard extends ConsumerWidget {
             // Save button
             _SaveButton(
               isSaved: isSaved,
-              onPressed: isSaved
-                  ? null
-                  : () => ref.read(downloadSchedulerProvider).saveNovel(novel),
+              onPressed: () {
+                final scheduler = ref.read(downloadSchedulerProvider);
+                if (isSaved) {
+                  scheduler.removeNovel(novel.site, novel.id);
+                  return;
+                }
+                scheduler.saveNovel(novel);
+              },
               colorScheme: colorScheme,
             ),
           ],
@@ -175,11 +180,9 @@ class _MetaRow extends StatelessWidget {
       runSpacing: 2,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        if (novel.author.isNotEmpty)
-          Text(novel.author, style: metaStyle),
+        if (novel.author.isNotEmpty) Text(novel.author, style: metaStyle),
         if (novel.genre.isNotEmpty) ...[
-          if (novel.author.isNotEmpty)
-            Text('·', style: metaStyle),
+          if (novel.author.isNotEmpty) Text('·', style: metaStyle),
           _GenreChip(genre: novel.genre, colorScheme: colorScheme),
         ],
         if (!novel.isShortStory) ...[
@@ -292,7 +295,11 @@ class _StatsRow extends StatelessWidget {
           const SizedBox(width: 10),
         ],
         if (novel.bookmarkCount > 0) ...[
-          Icon(Icons.bookmark_outline_rounded, size: 13, color: statStyle.color),
+          Icon(
+            Icons.bookmark_outline_rounded,
+            size: 13,
+            color: statStyle.color,
+          ),
           const SizedBox(width: 2),
           Text(_formatNumber(novel.bookmarkCount), style: statStyle),
         ],
@@ -327,30 +334,23 @@ class _SaveButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (isSaved) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 4),
-        child: Icon(
-          Icons.check_circle_rounded,
-          size: 20,
-          color: colorScheme.primary.withValues(alpha: 0.6),
-        ),
-      );
-    }
-
     return Padding(
       padding: const EdgeInsets.only(top: 0),
       child: IconButton(
         onPressed: onPressed,
         icon: Icon(
-          Icons.add_circle_outline_rounded,
-          size: 22,
-          color: colorScheme.primary,
+          isSaved
+              ? Icons.check_circle_rounded
+              : Icons.add_circle_outline_rounded,
+          size: isSaved ? 20 : 22,
+          color: isSaved
+              ? colorScheme.primary.withValues(alpha: 0.6)
+              : colorScheme.primary,
         ),
         constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
         padding: EdgeInsets.zero,
         visualDensity: VisualDensity.compact,
-        tooltip: '保存',
+        tooltip: isSaved ? '保存解除' : '保存',
       ),
     );
   }

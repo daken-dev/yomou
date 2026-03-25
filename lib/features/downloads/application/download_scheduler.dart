@@ -69,6 +69,10 @@ class DownloadScheduler {
     _schedulePump();
   }
 
+  Future<void> removeNovel(NovelSite site, String novelId) async {
+    await _store.removeNovel(site, novelId);
+  }
+
   Future<void> refreshNovel(NovelSite site, String novelId) async {
     await _store.enqueueSyncNovel(
       site: site,
@@ -146,6 +150,10 @@ class DownloadScheduler {
   }
 
   Future<void> _runSyncNovel(DownloadJobRecord job) async {
+    if (!await _store.hasSavedNovel(job.site, job.novelId)) {
+      return;
+    }
+
     switch (job.site) {
       case NovelSite.narou:
         final infoPage = await _client.fetchInfoPage(job.novelId);
@@ -164,6 +172,10 @@ class DownloadScheduler {
           tocPages.add(tocPage);
           lastChapterTitle =
               _lastChapterTitle(tocPage.entries) ?? lastChapterTitle;
+        }
+
+        if (!await _store.hasSavedNovel(job.site, job.novelId)) {
+          return;
         }
 
         final result = await _store.applyNovelSync(
@@ -194,6 +206,10 @@ class DownloadScheduler {
       throw StateError('Episode job missing episode number.');
     }
 
+    if (!await _store.hasSavedNovel(job.site, job.novelId)) {
+      return;
+    }
+
     switch (job.site) {
       case NovelSite.narou:
         final episodeUrl = await _store.episodeUrlFor(
@@ -201,6 +217,9 @@ class DownloadScheduler {
           job.novelId,
           episodeNo,
         );
+        if (!await _store.hasSavedNovel(job.site, job.novelId)) {
+          return;
+        }
         final page = await _client.fetchEpisodePage(
           job.novelId,
           episodeNo,

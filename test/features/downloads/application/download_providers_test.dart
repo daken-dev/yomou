@@ -37,6 +37,39 @@ void main() {
 
     await _waitForValue(subscription, {'N0001AA'});
   });
+
+  test('savedNovelIdsProvider refreshes after removing a novel', () async {
+    final database = AppDatabase(pathProvider: () async => ':memory:');
+    addTearDown(database.dispose);
+
+    final container = ProviderContainer(
+      overrides: [appDatabaseProvider.overrideWithValue(database)],
+    );
+    addTearDown(container.dispose);
+
+    const novel = NovelSummary(
+      site: NovelSite.narou,
+      id: 'N0001AA',
+      title: '作品1',
+    );
+    await container.read(downloadStoreProvider).saveNovel(novel);
+
+    final provider = savedNovelIdsProvider(NovelSite.narou);
+    final subscription = container.listen<AsyncValue<Set<String>>>(
+      provider,
+      (_, _) {},
+      fireImmediately: true,
+    );
+    addTearDown(subscription.close);
+
+    await _waitForValue(subscription, {'N0001AA'});
+
+    await container
+        .read(downloadStoreProvider)
+        .removeNovel(novel.site, novel.id);
+
+    await _waitForValue(subscription, <String>{});
+  });
 }
 
 Future<void> _waitForValue(

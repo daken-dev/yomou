@@ -66,15 +66,42 @@ class DownloadStore {
     });
   }
 
+  Future<void> removeNovel(NovelSite site, String novelId) async {
+    await _database.write((db) {
+      db.execute(
+        '''
+        DELETE FROM saved_novels
+        WHERE site = ?
+          AND novel_id = ?
+        ''',
+        <Object?>[site.name, novelId],
+      );
+    });
+  }
+
+  Future<bool> hasSavedNovel(NovelSite site, String novelId) async {
+    return _database.read((db) {
+      final rows = db.select(
+        '''
+        SELECT 1
+        FROM saved_novels
+        WHERE site = ?
+          AND novel_id = ?
+        LIMIT 1
+        ''',
+        <Object?>[site.name, novelId],
+      );
+      return rows.isNotEmpty;
+    });
+  }
+
   Future<Set<String>> listSavedNovelIds(NovelSite site) async {
     return _database.read((db) {
       final rows = db.select(
         'SELECT novel_id FROM saved_novels WHERE site = ?',
         <Object?>[site.name],
       );
-      return rows
-          .map((row) => row['novel_id']! as String)
-          .toSet();
+      return rows.map((row) => row['novel_id']! as String).toSet();
     });
   }
 
@@ -121,7 +148,9 @@ class DownloadStore {
     });
   }
 
-  Future<DownloadStatusSnapshot> getStatusSnapshot({int recentJobLimit = 40}) async {
+  Future<DownloadStatusSnapshot> getStatusSnapshot({
+    int recentJobLimit = 40,
+  }) async {
     final savedNovels = await listSavedNovels();
     final recentJobs = await listRecentJobs(limit: recentJobLimit);
     final counts = await _database.read((db) {
@@ -405,11 +434,9 @@ class DownloadStore {
     required bool force,
     required Duration refreshInterval,
   }) async {
-    final tocPayload = jsonEncode(
-      <String, Object?>{
-        'pages': tocPages.map((page) => page.toJson()).toList(growable: false),
-      },
-    );
+    final tocPayload = jsonEncode(<String, Object?>{
+      'pages': tocPages.map((page) => page.toJson()).toList(growable: false),
+    });
     final infoPayload = jsonEncode(infoPage.toJson());
     final episodeMetadata = _flattenEpisodes(tocPages);
 
@@ -424,6 +451,9 @@ class DownloadStore {
         ''',
         <Object?>[site.name, novelId],
       );
+      if (savedRows.isEmpty) {
+        return const SyncNovelApplyResult.ready([]);
+      }
       final storedEpisodeCount = savedRows.isEmpty
           ? 0
           : _intValue(savedRows.first['total_episodes']);
@@ -532,7 +562,9 @@ class DownloadStore {
           db,
           site: site.name,
           novelId: novelId,
-          episodeNumbers: episodeMetadata.map((item) => item.episodeNo).toList(),
+          episodeNumbers: episodeMetadata
+              .map((item) => item.episodeNo)
+              .toList(),
         );
       }
 
@@ -567,8 +599,9 @@ class DownloadStore {
           <Object?>[site.name, novelId, metadata.episodeNo],
         );
         final existing = existingRows.isEmpty ? null : existingRows.first;
-        final isDownloaded =
-            existing == null ? false : _boolValue(existing['is_downloaded']);
+        final isDownloaded = existing == null
+            ? false
+            : _boolValue(existing['is_downloaded']);
         final needsDownload =
             force ||
             existing == null ||
@@ -727,6 +760,9 @@ class DownloadStore {
         ''',
         <Object?>[excludingJobId, site.name, novelId],
       );
+      if (counts.isEmpty) {
+        return;
+      }
 
       final row = counts.first;
       final totalEpisodes = _intValue(row['total_episodes']);
@@ -824,8 +860,7 @@ class DownloadStore {
   DownloadJobOverview _downloadJobOverviewFromRow(sqlite.Row row) {
     return DownloadJobOverview(
       id: row['id']! as int,
-      siteName:
-          NovelSite.values.byName(row['site']! as String).displayName,
+      siteName: NovelSite.values.byName(row['site']! as String).displayName,
       novelId: row['novel_id']! as String,
       novelTitle: row['novel_title']! as String,
       type: DownloadJobTypeX.fromDb(row['job_type']! as String),
@@ -999,7 +1034,10 @@ class DownloadStore {
       return;
     }
 
-    final placeholders = List<String>.filled(episodeNumbers.length, '?').join(', ');
+    final placeholders = List<String>.filled(
+      episodeNumbers.length,
+      '?',
+    ).join(', ');
     db.execute(
       '''
       DELETE FROM novel_episodes
@@ -1011,10 +1049,7 @@ class DownloadStore {
     );
   }
 
-  int _episodePriority({
-    required int bookmarkEpisode,
-    required int episodeNo,
-  }) {
+  int _episodePriority({required int bookmarkEpisode, required int episodeNo}) {
     return 3000 - (bookmarkEpisode - episodeNo).abs();
   }
 

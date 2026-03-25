@@ -23,9 +23,14 @@ class NovelListItem extends ConsumerWidget {
       title: Text(novel.title),
       subtitle: novel.author.isEmpty ? null : Text(novel.author),
       trailing: TextButton(
-        onPressed: isSaved
-            ? null
-            : () => ref.read(downloadSchedulerProvider).saveNovel(novel),
+        onPressed: () {
+          final scheduler = ref.read(downloadSchedulerProvider);
+          if (isSaved) {
+            scheduler.removeNovel(novel.site, novel.id);
+            return;
+          }
+          scheduler.saveNovel(novel);
+        },
         child: Text(isSaved ? '保存済み' : '保存'),
       ),
     );
