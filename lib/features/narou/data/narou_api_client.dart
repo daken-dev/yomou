@@ -25,7 +25,7 @@ class NarouApiClient {
       _endpoint,
       queryParameters: <String, Object>{
         'out': 'json',
-        'of': 't-n',
+        'of': 't-n-w',
         'order': _orderForPeriod(period),
         'st': ((page - 1) * pageSize) + 1,
         'lim': pageSize,
@@ -69,6 +69,7 @@ class NarouApiClient {
 
   String _orderForPeriod(NovelRankingPeriod period) {
     return switch (period) {
+      NovelRankingPeriod.overall => 'hyoka',
       NovelRankingPeriod.daily => 'dailypoint',
       NovelRankingPeriod.weekly => 'weeklypoint',
       NovelRankingPeriod.monthly => 'monthlypoint',

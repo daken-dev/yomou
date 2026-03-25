@@ -5,9 +5,11 @@ class NovelSummary {
     required this.site,
     required this.id,
     required this.title,
+    this.author = '',
   });
 
   final NovelSite site;
   final String id;
   final String title;
+  final String author;
 }

@@ -1,0 +1,170 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:yomou/features/downloads/data/narou_web_client.dart';
+
+final narouNovelDetailControllerProvider =
+    AsyncNotifierProvider.family<
+      NarouNovelDetailController,
+      NarouNovelDetailState,
+      String
+    >(NarouNovelDetailController.new);
+
+class NarouNovelDetailController extends AsyncNotifier<NarouNovelDetailState> {
+  NarouNovelDetailController(this.novelId);
+
+  final String novelId;
+
+  @override
+  Future<NarouNovelDetailState> build() async {
+    final infoFuture = _client.fetchInfoPage(novelId);
+    final tocPage = await _client.fetchTocPage(novelId);
+    final infoPage = await infoFuture;
+
+    return NarouNovelDetailState(
+      title: infoPage.title ?? tocPage.title ?? novelId,
+      authorName: infoPage.authorName ?? tocPage.authorName ?? '',
+      items: _mapEntries(tocPage.entries),
+      currentPage: tocPage.page,
+      lastPage: tocPage.lastPage,
+      lastChapterTitle: _lastChapterTitle(tocPage.entries),
+    );
+  }
+
+  Future<void> loadNextPage() async {
+    final currentState = state.value;
+    if (currentState == null ||
+        currentState.isLoadingMore ||
+        !currentState.hasMore) {
+      return;
+    }
+
+    state = AsyncData(
+      currentState.copyWith(isLoadingMore: true, clearLoadMoreError: true),
+    );
+
+    try {
+      final tocPage = await _client.fetchTocPage(
+        novelId,
+        page: currentState.currentPage + 1,
+        inheritedChapterTitle: currentState.lastChapterTitle,
+      );
+
+      state = AsyncData(
+        currentState.copyWith(
+          items: <NarouNovelDetailListItem>[
+            ...currentState.items,
+            ..._mapEntries(tocPage.entries),
+          ],
+          currentPage: tocPage.page,
+          lastPage: tocPage.lastPage,
+          lastChapterTitle:
+              _lastChapterTitle(tocPage.entries) ??
+              currentState.lastChapterTitle,
+          isLoadingMore: false,
+          clearLoadMoreError: true,
+        ),
+      );
+    } catch (error) {
+      state = AsyncData(
+        currentState.copyWith(
+          isLoadingMore: false,
+          loadMoreErrorMessage: error.toString(),
+        ),
+      );
+    }
+  }
+
+  NarouWebClient get _client => ref.read(narouWebClientProvider);
+
+  List<NarouNovelDetailListItem> _mapEntries(List<NarouTocEntry> entries) {
+    return entries
+        .map((entry) {
+          return switch (entry.type) {
+            NarouTocEntryType.chapter => NarouNovelDetailListItem.chapter(
+              title: entry.title ?? '',
+            ),
+            NarouTocEntryType.episode => NarouNovelDetailListItem.episode(
+              title: entry.title ?? '',
+              episodeNo: entry.episodeNo,
+            ),
+          };
+        })
+        .toList(growable: false);
+  }
+
+  String? _lastChapterTitle(List<NarouTocEntry> entries) {
+    for (final entry in entries.reversed) {
+      if (entry.type == NarouTocEntryType.chapter && entry.title != null) {
+        return entry.title;
+      }
+    }
+    return null;
+  }
+}
+
+class NarouNovelDetailState {
+  const NarouNovelDetailState({
+    required this.title,
+    required this.authorName,
+    required this.items,
+    required this.currentPage,
+    required this.lastPage,
+    required this.lastChapterTitle,
+    this.isLoadingMore = false,
+    this.loadMoreErrorMessage,
+  });
+
+  final String title;
+  final String authorName;
+  final List<NarouNovelDetailListItem> items;
+  final int currentPage;
+  final int lastPage;
+  final String? lastChapterTitle;
+  final bool isLoadingMore;
+  final String? loadMoreErrorMessage;
+
+  bool get hasMore => currentPage < lastPage;
+
+  NarouNovelDetailState copyWith({
+    String? title,
+    String? authorName,
+    List<NarouNovelDetailListItem>? items,
+    int? currentPage,
+    int? lastPage,
+    String? lastChapterTitle,
+    bool? isLoadingMore,
+    String? loadMoreErrorMessage,
+    bool clearLoadMoreError = false,
+  }) {
+    return NarouNovelDetailState(
+      title: title ?? this.title,
+      authorName: authorName ?? this.authorName,
+      items: items ?? this.items,
+      currentPage: currentPage ?? this.currentPage,
+      lastPage: lastPage ?? this.lastPage,
+      lastChapterTitle: lastChapterTitle ?? this.lastChapterTitle,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      loadMoreErrorMessage: clearLoadMoreError
+          ? null
+          : loadMoreErrorMessage ?? this.loadMoreErrorMessage,
+    );
+  }
+}
+
+class NarouNovelDetailListItem {
+  const NarouNovelDetailListItem.chapter({required this.title})
+    : type = NarouNovelDetailListItemType.chapter,
+      episodeNo = null;
+
+  const NarouNovelDetailListItem.episode({
+    required this.title,
+    required this.episodeNo,
+  }) : type = NarouNovelDetailListItemType.episode;
+
+  final NarouNovelDetailListItemType type;
+  final String title;
+  final int? episodeNo;
+
+  bool get isChapter => type == NarouNovelDetailListItemType.chapter;
+}
+
+enum NarouNovelDetailListItemType { chapter, episode }

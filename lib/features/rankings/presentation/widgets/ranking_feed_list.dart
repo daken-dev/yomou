@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:yomou/features/novels/presentation/widgets/novel_list_item.dart';
 import 'package:yomou/features/rankings/application/ranking_feed_controller.dart';
 
@@ -39,7 +40,11 @@ class RankingFeedList extends ConsumerWidget {
             itemCount: state.items.length + _extraItemCount(state),
             itemBuilder: (context, index) {
               if (index < state.items.length) {
-                return NovelListItem(novel: state.items[index]);
+                final novel = state.items[index];
+                return NovelListItem(
+                  novel: novel,
+                  onTap: () => context.push('/narou/novel/${novel.id}'),
+                );
               }
 
               if (state.loadMoreErrorMessage != null) {

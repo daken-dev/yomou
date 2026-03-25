@@ -23,7 +23,10 @@ class AppDrawer extends StatelessWidget {
               ),
             ],
           ),
-          const ListTile(title: Text('他のサイト (予定)')),
+          ListTile(
+            title: const Text('ダウンロード状況'),
+            onTap: () => _go(context, '/downloads'),
+          ),
           ListTile(
             title: const Text('設定'),
             onTap: () => _go(context, '/settings'),

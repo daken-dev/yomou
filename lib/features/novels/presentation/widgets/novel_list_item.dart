@@ -1,13 +1,29 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:yomou/features/downloads/application/download_providers.dart';
 import 'package:yomou/features/novels/domain/entities/novel_summary.dart';
 
-class NovelListItem extends StatelessWidget {
-  const NovelListItem({super.key, required this.novel});
+class NovelListItem extends ConsumerWidget {
+  const NovelListItem({super.key, required this.novel, this.onTap});
 
   final NovelSummary novel;
+  final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) {
-    return Text(novel.title);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final savedIds = ref.watch(savedNovelIdsProvider(novel.site));
+    final isSaved = savedIds.asData?.value.contains(novel.id) ?? false;
+
+    return ListTile(
+      onTap: onTap,
+      title: Text(novel.title),
+      subtitle: novel.author.isEmpty ? null : Text(novel.author),
+      trailing: TextButton(
+        onPressed: isSaved
+            ? null
+            : () => ref.read(downloadSchedulerProvider).saveNovel(novel),
+        child: Text(isSaved ? '保存済み' : '保存'),
+      ),
+    );
   }
 }
