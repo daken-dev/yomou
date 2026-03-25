@@ -119,15 +119,6 @@ class _NarouEpisodeReaderPageState
     required KumihanThemeData readerTheme,
   }) {
     _latestData = data;
-    if (_nextStartPosition == _EpisodeStartPosition.lastPage) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) {
-          return;
-        }
-        _nextStartPosition = _EpisodeStartPosition.firstPage;
-        unawaited(_kumihanController.showLastPage());
-      });
-    }
     final document = _documentFor(data: data, readerSettings: readerSettings);
     final isLandscape =
         MediaQuery.orientationOf(context) == Orientation.landscape;
@@ -244,9 +235,8 @@ class _NarouEpisodeReaderPageState
                                   ),
                                 ),
                                 IconButton(
-                                  onPressed: () => context.push(
-                                    '/settings/reader',
-                                  ),
+                                  onPressed: () =>
+                                      context.push('/settings/reader'),
                                   icon: const Icon(
                                     Icons.settings,
                                     color: Colors.white,
@@ -403,6 +393,10 @@ class _NarouEpisodeReaderPageState
         );
         return;
       }
+      if (isForward) {
+        context.pop();
+        return;
+      }
       if (!isForward && data.previousEpisodeNo != null) {
         _openEpisode(
           episodeNo: data.previousEpisodeNo!,
@@ -455,6 +449,20 @@ class _NarouEpisodeReaderPageState
   }) {
     if (snapshot.totalPages <= 0) {
       return;
+    }
+
+    if (_nextStartPosition == _EpisodeStartPosition.lastPage) {
+      _nextStartPosition = _EpisodeStartPosition.firstPage;
+      final lastPageIndex = snapshot.totalPages - 1;
+      if (snapshot.currentPage != lastPageIndex) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) {
+            return;
+          }
+          unawaited(_kumihanController.showLastPage());
+        });
+        return;
+      }
     }
 
     final pendingRestorePosition = _pendingRestorePosition;

@@ -124,6 +124,14 @@ class DownloadStore {
           s.last_synced_at,
           s.next_refresh_at,
           COALESCE(b.episode_no, 1) AS resume_episode_no,
+          (
+            SELECT e.episode_url
+            FROM novel_episodes e
+            WHERE e.site = s.site
+              AND e.novel_id = s.novel_id
+              AND e.episode_no = COALESCE(b.episode_no, 1)
+            LIMIT 1
+          ) AS resume_episode_url,
           COALESCE(b.page_number, 1) AS resume_page_number,
           COALESCE(b.page_count, 0) AS resume_page_count,
           MAX(s.total_episodes - COALESCE(b.episode_no, 1) + 1, 0)
@@ -954,6 +962,7 @@ class DownloadStore {
       activeRunningJobs: runningJobs,
       remainingEpisodes: _intValue(row['remaining_episodes']),
       resumeEpisodeNo: _intValue(row['resume_episode_no']),
+      resumeEpisodeUrl: row['resume_episode_url'] as String?,
       resumePageNumber: _intValue(row['resume_page_number']),
       resumePageCount: _intValue(row['resume_page_count']),
       createdAt: DateTime.parse(row['created_at']! as String),

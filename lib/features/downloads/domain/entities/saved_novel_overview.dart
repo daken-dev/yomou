@@ -27,6 +27,7 @@ class SavedNovelOverview {
     required this.activeRunningJobs,
     required this.remainingEpisodes,
     required this.resumeEpisodeNo,
+    required this.resumeEpisodeUrl,
     required this.resumePageNumber,
     required this.resumePageCount,
     required this.createdAt,
@@ -48,6 +49,7 @@ class SavedNovelOverview {
   final int activeRunningJobs;
   final int remainingEpisodes;
   final int resumeEpisodeNo;
+  final String? resumeEpisodeUrl;
   final int resumePageNumber;
   final int resumePageCount;
   final DateTime createdAt;

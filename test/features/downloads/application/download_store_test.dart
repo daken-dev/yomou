@@ -338,6 +338,7 @@ void main() {
       final overview = (await store.listSavedNovels()).single;
       expect(overview.remainingEpisodes, 2);
       expect(overview.resumeEpisodeNo, 2);
+      expect(overview.resumeEpisodeUrl, 'https://ncode.syosetu.com/n0001aa/2/');
       expect(overview.resumePageNumber, 3);
       expect(overview.resumePageCount, 8);
     },
@@ -413,6 +414,7 @@ void main() {
       var overview = (await store.listSavedNovels()).single;
       expect(overview.remainingEpisodes, 0);
       expect(overview.resumeEpisodeNo, 3);
+      expect(overview.resumeEpisodeUrl, isNull);
       expect(overview.resumePageCount, 0);
 
       await store.applyNovelSync(
@@ -469,6 +471,73 @@ void main() {
       overview = (await store.listSavedNovels()).single;
       expect(overview.remainingEpisodes, 1);
       expect(overview.resumeEpisodeNo, 3);
+      expect(overview.resumeEpisodeUrl, 'https://ncode.syosetu.com/n0001aa/3/');
     },
   );
+
+  test('saveReadingProgress preserves short story resume URL', () async {
+    final database = AppDatabase(pathProvider: () async => ':memory:');
+    addTearDown(database.dispose);
+
+    final store = DownloadStore(database);
+    const novel = NovelSummary(
+      site: NovelSite.narou,
+      id: 'N0001AA',
+      title: '短編作品',
+    );
+
+    await store.saveNovel(novel);
+    await store.applyNovelSync(
+      site: novel.site,
+      novelId: novel.id,
+      fallbackTitle: novel.title,
+      infoPage: const NarouInfoPage(
+        url: 'https://ncode.syosetu.com/novelview/infotop/ncode/n0001aa/',
+        title: '短編作品',
+        authorUrl: 'https://example.com/authors/1',
+        fields: <String, String>{'作者名': '作者1'},
+        kasasagiUrl: null,
+        workUrl: null,
+        qrcodeUrl: null,
+      ),
+      tocPages: <NarouTocPage>[
+        NarouTocPage(
+          url: 'https://ncode.syosetu.com/n0001aa/',
+          page: 1,
+          title: '短編作品',
+          authorName: '作者1',
+          authorUrl: 'https://example.com/authors/1',
+          summary: 'あらすじ',
+          summaryHtml: '<p>あらすじ</p>',
+          latestEpisodePublished: '2026/03/25',
+          lastPage: 1,
+          lastPageUrl: null,
+          entries: <NarouTocEntry>[
+            NarouTocEntry.episode(
+              episodeNo: 1,
+              title: '短編作品',
+              url: 'https://ncode.syosetu.com/n0001aa/',
+              indexPage: 1,
+            ),
+          ],
+        ),
+      ],
+      force: false,
+      refreshInterval: const Duration(hours: 1),
+    );
+
+    await store.saveReadingProgress(
+      site: novel.site,
+      novelId: novel.id,
+      episodeNo: 1,
+      pageNumber: 2,
+      pageCount: 5,
+    );
+
+    final overview = (await store.listSavedNovels()).single;
+    expect(overview.resumeEpisodeNo, 1);
+    expect(overview.resumeEpisodeUrl, 'https://ncode.syosetu.com/n0001aa/');
+    expect(overview.resumePageNumber, 2);
+    expect(overview.resumePageCount, 5);
+  });
 }

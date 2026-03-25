@@ -136,6 +136,9 @@ class _HomePageState extends ConsumerState<HomePage> {
   }) {
     if (openDirectlyInReader && novel.hasResumeTarget) {
       final queryParameters = <String, String>{};
+      if (novel.resumeEpisodeUrl case final episodeUrl?) {
+        queryParameters['url'] = episodeUrl;
+      }
       if (novel.hasResumePageProgress) {
         queryParameters['resumePage'] = novel.resumePageNumber.toString();
         queryParameters['resumePageCount'] = novel.resumePageCount.toString();
@@ -195,7 +198,10 @@ class _SortControls extends StatelessWidget {
                   .map(
                     (value) => ButtonSegment<HomeNovelSortKey>(
                       value: value,
-                      label: Text(value.label, style: const TextStyle(fontSize: 11)),
+                      label: Text(
+                        value.label,
+                        style: const TextStyle(fontSize: 11),
+                      ),
                     ),
                   )
                   .toList(growable: false),

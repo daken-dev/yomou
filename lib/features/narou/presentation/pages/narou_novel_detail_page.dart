@@ -140,6 +140,9 @@ class NarouNovelDetailPage extends ConsumerWidget {
 
   String _resumeLocation(SavedNovelOverview novel) {
     final queryParameters = <String, String>{};
+    if (novel.resumeEpisodeUrl case final episodeUrl?) {
+      queryParameters['url'] = episodeUrl;
+    }
     if (novel.hasResumePageProgress) {
       queryParameters['resumePage'] = novel.resumePageNumber.toString();
       queryParameters['resumePageCount'] = novel.resumePageCount.toString();
