@@ -19,7 +19,7 @@ void main() {
 
       final normalized = AozoraTextNormalizer.stripIntroBlock(raw);
 
-      expect(normalized, '本文1行目\n本文2行目');
+      expect(normalized, '眞間名所\n阪井久良伎\n\n本文1行目\n本文2行目');
     });
 
     test('keeps text unchanged when intro block does not exist', () {

@@ -18,10 +18,12 @@ class AozoraTextNormalizer {
       return normalized;
     }
 
+    final before = normalized.substring(0, start);
     final after = normalized.substring(end + '-------------------------------------------------------'.length).trimLeft();
-    if (after.isEmpty) {
+    final result = (before + after).trim();
+    if (result.isEmpty) {
       return normalized;
     }
-    return after;
+    return result;
   }
 }

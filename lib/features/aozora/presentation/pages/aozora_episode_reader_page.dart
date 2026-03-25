@@ -45,6 +45,7 @@ class _AozoraEpisodeReaderPageState
   var _controlsVisible = false;
   _PendingRestorePosition? _pendingRestorePosition;
   KumihanSnapshot? _latestSnapshot;
+  KumihanDocument? _cachedDocument;
 
   @override
   void initState() {
@@ -109,13 +110,7 @@ class _AozoraEpisodeReaderPageState
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(child: Text('本文取得失敗: $error')),
         data: (data) {
-          final document = KumihanAozoraParser(
-            title: data.title,
-            author: data.author,
-            headerTitle: data.author == null
-                ? data.title
-                : '${data.title} / ${data.author}',
-          ).parse(data.body);
+          final document = _documentFor(data);
 
           return Stack(
             children: [
@@ -325,6 +320,21 @@ class _AozoraEpisodeReaderPageState
         ? SystemUiMode.edgeToEdge
         : SystemUiMode.immersiveSticky;
     SystemChrome.setEnabledSystemUIMode(mode);
+  }
+
+  KumihanDocument _documentFor(AozoraEpisodeReaderData data) {
+    if (_cachedDocument != null) {
+      return _cachedDocument!;
+    }
+    final document = KumihanAozoraParser(
+      title: data.title,
+      author: data.author,
+      headerTitle: data.author == null
+          ? data.title
+          : '${data.title} / ${data.author}',
+    ).parse(data.body);
+    _cachedDocument = document;
+    return document;
   }
 
   void _syncReaderModes({
