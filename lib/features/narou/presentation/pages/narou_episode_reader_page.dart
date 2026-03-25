@@ -8,8 +8,8 @@ import 'package:go_router/go_router.dart';
 import 'package:kumihan/kumihan.dart';
 import 'package:yomou/features/downloads/application/download_providers.dart';
 import 'package:yomou/features/narou/application/narou_episode_reader_controller.dart';
-import 'package:yomou/features/narou/data/narou_kumihan_parser.dart';
 import 'package:yomou/features/narou/data/narou_episode_image_cache.dart';
+import 'package:yomou/features/narou/data/narou_kumihan_parser.dart';
 import 'package:yomou/features/narou/presentation/reader_navigation.dart';
 import 'package:yomou/features/novels/domain/entities/novel_site.dart';
 import 'package:yomou/features/settings/application/settings_providers.dart';
@@ -227,12 +227,33 @@ class _NarouEpisodeReaderPageState
                                   ),
                                 ),
                                 const SizedBox(width: 12),
-                                Text(
-                                  pageLabel,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
+                                GestureDetector(
+                                  onTap: snapshot.totalPages > 0
+                                      ? () => _showPageJumpDialog(
+                                            context,
+                                            currentPage:
+                                                snapshot.currentPage + 1,
+                                            totalPages: snapshot.totalPages,
+                                          )
+                                      : null,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white
+                                          .withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      pageLabel,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
                                   ),
                                 ),
                                 IconButton(
@@ -264,34 +285,6 @@ class _NarouEpisodeReaderPageState
                               children: [
                                 Expanded(
                                   child: TextButton.icon(
-                                    onPressed: data.previousEpisodeNo == null
-                                        ? null
-                                        : () => _openEpisode(
-                                            episodeNo: data.previousEpisodeNo!,
-                                            episodeUrl: data.page.prevUrl,
-                                            startPosition:
-                                                _EpisodeStartPosition.lastPage,
-                                          ),
-                                    icon: const Icon(Icons.skip_previous),
-                                    label: const Text('前の話'),
-                                  ),
-                                ),
-                                if (episodeLabel != null)
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                    ),
-                                    child: Text(
-                                      episodeLabel,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                Expanded(
-                                  child: TextButton.icon(
                                     onPressed: data.nextEpisodeNo == null
                                         ? null
                                         : () => _openEpisode(
@@ -300,8 +293,50 @@ class _NarouEpisodeReaderPageState
                                             startPosition:
                                                 _EpisodeStartPosition.firstPage,
                                           ),
-                                    icon: const Icon(Icons.skip_next),
+                                    icon: const Icon(Icons.skip_previous),
                                     label: const Text('次の話'),
+                                  ),
+                                ),
+                                if (episodeLabel != null)
+                                  GestureDetector(
+                                    onTap: () => _showEpisodeJumpDialog(
+                                      context,
+                                      currentEpisode:
+                                          data.page.sequenceCurrent!,
+                                      totalEpisodes: data.page.sequenceTotal!,
+                                    ),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 14,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color:
+                                            Colors.white.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        episodeLabel,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                Expanded(
+                                  child: TextButton.icon(
+                                    onPressed: data.previousEpisodeNo == null
+                                        ? null
+                                        : () => _openEpisode(
+                                            episodeNo: data.previousEpisodeNo!,
+                                            episodeUrl: data.page.prevUrl,
+                                            startPosition:
+                                                _EpisodeStartPosition.lastPage,
+                                          ),
+                                    icon: const Icon(Icons.skip_next),
+                                    label: const Text('前の話'),
                                   ),
                                 ),
                               ],
@@ -437,6 +472,50 @@ class _NarouEpisodeReaderPageState
       _cachedDocument = null;
     });
     _applyFullscreenMode();
+  }
+
+  void _showPageJumpDialog(
+    BuildContext context, {
+    required int currentPage,
+    required int totalPages,
+  }) {
+    showDialog<int>(
+      context: context,
+      builder: (context) => _EpisodeReaderNumberInputDialog(
+        title: 'ページ移動',
+        labelText: 'ページ番号',
+        suffixTotal: totalPages,
+        initialValue: currentPage,
+      ),
+    ).then((page) {
+      if (page != null) {
+        unawaited(_kumihanController.showPage(page - 1));
+      }
+    });
+  }
+
+  void _showEpisodeJumpDialog(
+    BuildContext context, {
+    required int currentEpisode,
+    required int totalEpisodes,
+  }) {
+    showDialog<int>(
+      context: context,
+      builder: (context) => _EpisodeReaderNumberInputDialog(
+        title: '話数移動',
+        labelText: '話数',
+        suffixTotal: totalEpisodes,
+        initialValue: currentEpisode,
+      ),
+    ).then((episode) {
+      if (episode != null && episode != currentEpisode) {
+        _openEpisode(
+          episodeNo: episode,
+          episodeUrl: null,
+          startPosition: _EpisodeStartPosition.firstPage,
+        );
+      }
+    });
   }
 
   void _toggleControls() {
@@ -598,6 +677,76 @@ class _NarouEpisodeReaderPageState
 }
 
 enum _EpisodeStartPosition { firstPage, lastPage }
+
+class _EpisodeReaderNumberInputDialog extends StatefulWidget {
+  const _EpisodeReaderNumberInputDialog({
+    required this.title,
+    required this.labelText,
+    required this.suffixTotal,
+    required this.initialValue,
+  });
+
+  final String title;
+  final String labelText;
+  final int suffixTotal;
+  final int initialValue;
+
+  @override
+  State<_EpisodeReaderNumberInputDialog> createState() =>
+      _EpisodeReaderNumberInputDialogState();
+}
+
+class _EpisodeReaderNumberInputDialogState
+    extends State<_EpisodeReaderNumberInputDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialValue.toString());
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submitIfValid() {
+    final value = int.tryParse(_controller.text);
+    if (value != null && value >= 1 && value <= widget.suffixTotal) {
+      Navigator.of(context).pop(value);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        keyboardType: TextInputType.number,
+        decoration: InputDecoration(
+          labelText: widget.labelText,
+          hintText: '1 〜 ${widget.suffixTotal}',
+          suffixText: '/ ${widget.suffixTotal}',
+        ),
+        onSubmitted: (_) => _submitIfValid(),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('キャンセル'),
+        ),
+        FilledButton(
+          onPressed: _submitIfValid,
+          child: const Text('移動'),
+        ),
+      ],
+    );
+  }
+}
 
 class _PendingRestorePosition {
   const _PendingRestorePosition({

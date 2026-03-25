@@ -11,17 +11,11 @@ final settingsStoreProvider = Provider<SettingsStore>((ref) {
   return store;
 });
 
-final settingsChangeTickProvider = StreamProvider<int>((ref) async* {
-  var tick = 0;
-  yield tick;
+final appSettingsProvider = StreamProvider<AppSettings>((ref) async* {
+  final store = ref.watch(settingsStoreProvider);
 
-  await for (final _ in ref.watch(settingsStoreProvider).changes) {
-    tick += 1;
-    yield tick;
+  yield await store.readSettings();
+  await for (final _ in store.changes) {
+    yield await store.readSettings();
   }
-});
-
-final appSettingsProvider = FutureProvider<AppSettings>((ref) async {
-  ref.watch(settingsChangeTickProvider);
-  return ref.watch(settingsStoreProvider).readSettings();
 });
