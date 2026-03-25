@@ -11,28 +11,24 @@ class NarouKumihanParser {
 
     _appendSection(
       blocks,
-      title: '前書き',
       htmlFragment: page.prefaceHtml,
       fallbackText: page.preface,
       baseUrl: page.url,
-      showHeading: true,
     );
     _appendSection(
       blocks,
-      title: null,
       htmlFragment: page.bodyHtml,
       fallbackText: page.body,
       baseUrl: page.url,
-      showHeading: false,
     );
     _appendSection(
       blocks,
-      title: 'あとがき',
       htmlFragment: page.afterwordHtml,
       fallbackText: page.afterword,
       baseUrl: page.url,
-      showHeading: true,
     );
+
+    _trimTrailingBlankParagraphs(blocks);
 
     if (blocks.isEmpty) {
       blocks.add(
@@ -47,36 +43,26 @@ class NarouKumihanParser {
 
   void _appendSection(
     List<KumihanBlock> blocks, {
-    required String? title,
     required String? htmlFragment,
     required String? fallbackText,
     required String baseUrl,
-    required bool showHeading,
   }) {
-    final sectionBlocks = _parseSection(
-      htmlFragment: htmlFragment,
-      fallbackText: fallbackText,
-      baseUrl: baseUrl,
+    final sectionBlocks = _trimEdgeBlankParagraphs(
+      _parseSection(
+        htmlFragment: htmlFragment,
+        fallbackText: fallbackText,
+        baseUrl: baseUrl,
+      ),
     );
     if (sectionBlocks.isEmpty) {
       return;
     }
 
-    if (blocks.isNotEmpty && !_isBlankParagraph(blocks.last)) {
-      blocks.add(const KumihanParagraphBlock(children: <KumihanInline>[]));
-    }
-
-    if (showHeading && title != null && title.isNotEmpty) {
-      blocks.add(
-        KumihanParagraphBlock(
-          children: <KumihanInline>[
-            KumihanStyledInline(
-              children: <KumihanInline>[KumihanTextInline(title)],
-              style: '中見出し',
-            ),
-          ],
-        ),
-      );
+    if (blocks.isNotEmpty) {
+      _trimTrailingBlankParagraphs(blocks);
+      if (blocks.isNotEmpty) {
+        blocks.add(_dividerBlock());
+      }
     }
 
     blocks.addAll(sectionBlocks);
@@ -94,7 +80,7 @@ class NarouKumihanParser {
         container: 'div',
       );
       final context = _ParserContext(baseUrl: baseUrl);
-      return context.parseBlockChildren(fragment.nodes);
+      return _normalizeBlocks(context.parseBlockChildren(fragment.nodes));
     }
 
     final normalizedText = fallbackText?.trim() ?? '';
@@ -102,20 +88,250 @@ class NarouKumihanParser {
       return const <KumihanBlock>[];
     }
 
-    return normalizedText
-        .split('\n')
-        .map(
-          (line) => KumihanParagraphBlock(
-            children: line.isEmpty
-                ? const <KumihanInline>[]
-                : <KumihanInline>[KumihanTextInline(line)],
+    return _normalizeBlocks(
+      normalizedText
+          .split('\n')
+          .map(
+            (line) => KumihanParagraphBlock(
+              children: line.isEmpty
+                  ? const <KumihanInline>[]
+                  : <KumihanInline>[KumihanTextInline(line)],
+            ),
+          )
+          .toList(growable: false),
+    );
+  }
+
+  List<KumihanBlock> _normalizeBlocks(List<KumihanBlock> blocks) {
+    return blocks.map(_normalizeBlock).toList(growable: false);
+  }
+
+  KumihanBlock _normalizeBlock(KumihanBlock block) {
+    if (block is! KumihanParagraphBlock) {
+      return block;
+    }
+
+    final children = _normalizeParagraphChildren(block.children);
+    if (_isBlankInlineList(children)) {
+      return KumihanParagraphBlock(
+        children: const <KumihanInline>[],
+        keepWithPrevious: block.keepWithPrevious,
+        leadingCommands: block.leadingCommands,
+      );
+    }
+    if (_isDividerParagraph(children)) {
+      return _dividerBlock();
+    }
+
+    return KumihanParagraphBlock(
+      children: children,
+      keepWithPrevious: block.keepWithPrevious,
+      leadingCommands: block.leadingCommands,
+    );
+  }
+
+  List<KumihanInline> _normalizeParagraphChildren(
+    List<KumihanInline> children,
+  ) {
+    final normalized = <KumihanInline>[];
+    for (final child in children) {
+      normalized.addAll(_normalizeInline(child));
+    }
+    return normalized;
+  }
+
+  List<KumihanInline> _normalizeInline(KumihanInline inline) {
+    switch (inline) {
+      case KumihanTextInline():
+        return _normalizeTextInline(inline.text);
+      case KumihanStyledInline():
+        return <KumihanInline>[
+          KumihanStyledInline(
+            children: _normalizeParagraphChildren(inline.children),
+            style: inline.style,
           ),
-        )
-        .toList(growable: false);
+        ];
+      case KumihanLinkInline():
+        return <KumihanInline>[
+          KumihanLinkInline(
+            children: _normalizeParagraphChildren(inline.children),
+            target: inline.target,
+          ),
+        ];
+      case KumihanRubyInline():
+        return <KumihanInline>[
+          KumihanRubyInline(
+            children: _normalizeParagraphChildren(inline.children),
+            ruby: inline.ruby,
+            side: inline.side,
+          ),
+        ];
+      default:
+        return <KumihanInline>[inline];
+    }
+  }
+
+  List<KumihanInline> _normalizeTextInline(String text) {
+    final children = <KumihanInline>[];
+    final buffer = StringBuffer();
+    var index = 0;
+
+    while (index < text.length) {
+      final digitRunLength = _digitRunLength(text, index);
+      if (digitRunLength == 2) {
+        if (buffer.isNotEmpty) {
+          children.add(KumihanTextInline(buffer.toString()));
+          buffer.clear();
+        }
+        children.add(
+          KumihanStyledInline(
+            children: <KumihanInline>[
+              KumihanTextInline(
+                _toHalfWidthDigits(text.substring(index, index + 2)),
+              ),
+            ],
+            style: '縦中横',
+          ),
+        );
+        index += 2;
+        continue;
+      }
+      if (digitRunLength > 0) {
+        buffer.write(text.substring(index, index + digitRunLength));
+        index += digitRunLength;
+        continue;
+      }
+      buffer.writeCharCode(text.codeUnitAt(index));
+      index += 1;
+    }
+
+    if (buffer.isNotEmpty) {
+      children.add(KumihanTextInline(buffer.toString()));
+    }
+
+    return children;
+  }
+
+  int _digitRunLength(String text, int start) {
+    var index = start;
+    while (index < text.length && _isDigitCodeUnit(text.codeUnitAt(index))) {
+      index += 1;
+    }
+    return index - start;
+  }
+
+  bool _isDigitCodeUnit(int codeUnit) {
+    return (codeUnit >= 0x30 && codeUnit <= 0x39) ||
+        (codeUnit >= 0xFF10 && codeUnit <= 0xFF19);
+  }
+
+  String _toHalfWidthDigits(String text) {
+    final buffer = StringBuffer();
+    for (final codeUnit in text.codeUnits) {
+      if (codeUnit >= 0xFF10 && codeUnit <= 0xFF19) {
+        buffer.writeCharCode(codeUnit - 0xFEE0);
+        continue;
+      }
+      buffer.writeCharCode(codeUnit);
+    }
+    return buffer.toString();
+  }
+
+  bool _isDividerParagraph(List<KumihanInline> children) {
+    final text = _plainText(children).trim();
+    if (text.isEmpty) {
+      return false;
+    }
+    final normalized = text
+        .replaceAll('＊', '*')
+        .replaceAll('＝', '=')
+        .replaceAll('＿', '_')
+        .replaceAll(RegExp(r'[ー―−－]'), '-');
+    return RegExp(r'^([*=\-_])\1{3,}$').hasMatch(normalized);
+  }
+
+  bool _isBlankInlineList(List<KumihanInline> children) {
+    if (children.isEmpty) {
+      return true;
+    }
+    for (final child in children) {
+      switch (child) {
+        case KumihanTextInline():
+          final text = child.text.replaceAll(RegExp(r'[\s　]+'), '');
+          if (text.isNotEmpty) {
+            return false;
+          }
+          break;
+        case KumihanStyledInline():
+          if (!_isBlankInlineList(child.children)) {
+            return false;
+          }
+          break;
+        case KumihanLinkInline():
+          if (!_isBlankInlineList(child.children)) {
+            return false;
+          }
+          break;
+        case KumihanRubyInline():
+          if (!_isBlankInlineList(child.children)) {
+            return false;
+          }
+          break;
+        default:
+          return false;
+      }
+    }
+    return true;
+  }
+
+  String _plainText(List<KumihanInline> children) {
+    final buffer = StringBuffer();
+    for (final child in children) {
+      switch (child) {
+        case KumihanTextInline():
+          buffer.write(child.text);
+          break;
+        case KumihanStyledInline():
+          buffer.write(_plainText(child.children));
+          break;
+        case KumihanLinkInline():
+          buffer.write(_plainText(child.children));
+          break;
+        case KumihanRubyInline():
+          buffer.write(_plainText(child.children));
+          break;
+        default:
+          return '';
+      }
+    }
+    return buffer.toString();
+  }
+
+  KumihanParagraphBlock _dividerBlock() {
+    return const KumihanParagraphBlock(
+      children: <KumihanInline>[KumihanTextInline('――――')],
+    );
+  }
+
+  List<KumihanBlock> _trimEdgeBlankParagraphs(List<KumihanBlock> blocks) {
+    final trimmed = List<KumihanBlock>.from(blocks);
+    while (trimmed.isNotEmpty && _isBlankParagraph(trimmed.first)) {
+      trimmed.removeAt(0);
+    }
+    while (trimmed.isNotEmpty && _isBlankParagraph(trimmed.last)) {
+      trimmed.removeLast();
+    }
+    return trimmed;
+  }
+
+  void _trimTrailingBlankParagraphs(List<KumihanBlock> blocks) {
+    while (blocks.isNotEmpty && _isBlankParagraph(blocks.last)) {
+      blocks.removeLast();
+    }
   }
 
   bool _isBlankParagraph(KumihanBlock block) {
-    return block is KumihanParagraphBlock && block.children.isEmpty;
+    return block is KumihanParagraphBlock && _isBlankInlineList(block.children);
   }
 
   String _headerTitle(NarouEpisodePage page) {
@@ -164,6 +380,12 @@ class _ParserContext {
       case 'img':
         return <KumihanBlock>[
           KumihanParagraphBlock(children: _imageInlines(node)),
+        ];
+      case 'hr':
+        return const <KumihanBlock>[
+          KumihanParagraphBlock(
+            children: <KumihanInline>[KumihanTextInline('――――')],
+          ),
         ];
       case 'h1':
       case 'h2':

@@ -2,25 +2,55 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yomou/features/navigation/presentation/widgets/app_scaffold.dart';
 import 'package:yomou/features/novels/domain/entities/novel_ranking_period.dart';
+import 'package:yomou/features/novels/domain/entities/novel_search_order.dart';
+import 'package:yomou/features/novels/domain/entities/novel_search_request.dart';
 import 'package:yomou/features/novels/domain/entities/novel_site.dart';
 import 'package:yomou/features/rankings/application/ranking_feed_controller.dart';
 import 'package:yomou/features/rankings/presentation/widgets/ranking_feed_list.dart';
+import 'package:yomou/features/search/presentation/widgets/search_result_list.dart';
 
+/// Whether the current mode is "新着" (newest) or a ranking period.
+///
+/// `null` period means 新着 mode.
 class SiteRankingPage extends StatelessWidget {
-  const SiteRankingPage({super.key, required this.site, required this.period});
+  const SiteRankingPage({
+    super.key,
+    required this.site,
+    required this.period,
+    this.isNewest = false,
+  });
 
   final NovelSite site;
   final NovelRankingPeriod period;
+  final bool isNewest;
+
+  static const _tabs = <({String label, String? periodValue})>[
+    (label: '新着', periodValue: 'new'),
+    (label: '日間', periodValue: 'daily'),
+    (label: '週間', periodValue: 'weekly'),
+    (label: '月間', periodValue: 'monthly'),
+    (label: '四半期', periodValue: 'quarterly'),
+    (label: '年間', periodValue: 'yearly'),
+    (label: '総合', periodValue: 'overall'),
+  ];
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final title = isNewest ? '新着一覧' : period.displayName;
 
     return AppScaffold(
-      title: period.displayName,
+      title: title,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.search_rounded),
+          tooltip: '検索',
+          onPressed: () => context.push('/narou/search'),
+        ),
+      ],
       body: Column(
         children: [
-          // Period selector
+          // Tab selector
           Container(
             width: double.infinity,
             decoration: BoxDecoration(
@@ -36,18 +66,19 @@ class SiteRankingPage extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: Row(
                 children: [
-                  for (final value in NovelRankingPeriodX.selectableValues)
+                  for (final tab in _tabs)
                     Padding(
                       padding: const EdgeInsets.only(right: 6),
                       child: ChoiceChip(
-                        label: Text(value.label),
-                        selected: value == period,
-                        onSelected: (_) => context
-                            .go('/narou/ranking?period=${value.queryValue}'),
+                        label: Text(tab.label),
+                        selected: _isSelected(tab.periodValue),
+                        onSelected: (_) => context.go(
+                          '/narou/ranking?period=${tab.periodValue}',
+                        ),
                         showCheckmark: false,
                         labelStyle: TextStyle(
                           fontSize: 13,
-                          fontWeight: value == period
+                          fontWeight: _isSelected(tab.periodValue)
                               ? FontWeight.w600
                               : FontWeight.w400,
                         ),
@@ -61,12 +92,25 @@ class SiteRankingPage extends StatelessWidget {
           ),
           // Feed
           Expanded(
-            child: RankingFeedList(
-              args: RankingFeedArgs(site: site, period: period),
-            ),
+            child: isNewest
+                ? SearchResultList(
+                    request: NovelSearchRequest(
+                      site: site,
+                      order: NovelSearchOrder.newest,
+                    ),
+                    showRankHighlight: false,
+                  )
+                : RankingFeedList(
+                    args: RankingFeedArgs(site: site, period: period),
+                  ),
           ),
         ],
       ),
     );
+  }
+
+  bool _isSelected(String? periodValue) {
+    if (isNewest) return periodValue == 'new';
+    return periodValue == period.queryValue;
   }
 }

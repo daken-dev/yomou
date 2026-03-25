@@ -9,11 +9,13 @@ class RankingItemCard extends ConsumerWidget {
     required this.novel,
     required this.rank,
     this.onTap,
+    this.showRankHighlight = true,
   });
 
   final NovelSummary novel;
   final int rank;
   final VoidCallback? onTap;
+  final bool showRankHighlight;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -36,7 +38,11 @@ class RankingItemCard extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Rank number
-            _RankBadge(rank: rank, colorScheme: colorScheme),
+            _RankBadge(
+              rank: rank,
+              colorScheme: colorScheme,
+              highlight: showRankHighlight,
+            ),
             const SizedBox(width: 12),
             // Content
             Expanded(
@@ -92,14 +98,19 @@ class RankingItemCard extends ConsumerWidget {
 }
 
 class _RankBadge extends StatelessWidget {
-  const _RankBadge({required this.rank, required this.colorScheme});
+  const _RankBadge({
+    required this.rank,
+    required this.colorScheme,
+    this.highlight = true,
+  });
 
   final int rank;
   final ColorScheme colorScheme;
+  final bool highlight;
 
   @override
   Widget build(BuildContext context) {
-    final isTop3 = rank <= 3;
+    final isTop3 = highlight && rank <= 3;
     final color = switch (rank) {
       1 => const Color(0xFFFFB300),
       2 => const Color(0xFF90A4AE),

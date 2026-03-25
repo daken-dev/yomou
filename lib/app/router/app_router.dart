@@ -21,12 +21,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/', builder: (context, state) => const HomePage()),
       GoRoute(
         path: '/narou/ranking',
-        builder: (context, state) => SiteRankingPage(
-          site: NovelSite.narou,
-          period: NovelRankingPeriodX.fromQueryValue(
-            state.uri.queryParameters['period'],
-          ),
-        ),
+        builder: (context, state) {
+          final periodParam = state.uri.queryParameters['period'];
+          final isNewest = periodParam == 'new';
+          return SiteRankingPage(
+            site: NovelSite.narou,
+            period: NovelRankingPeriodX.fromQueryValue(periodParam),
+            isNewest: isNewest,
+          );
+        },
       ),
       GoRoute(
         path: '/narou/novel/:id',

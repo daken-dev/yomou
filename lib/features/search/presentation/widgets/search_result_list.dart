@@ -6,47 +6,79 @@ import 'package:yomou/features/rankings/presentation/widgets/ranking_item_card.d
 import 'package:yomou/features/search/application/search_result_feed_controller.dart';
 
 class SearchResultList extends ConsumerWidget {
-  const SearchResultList({super.key, required this.request});
+  const SearchResultList({
+    super.key,
+    required this.request,
+    this.showRankHighlight = true,
+  });
 
   final NovelSearchRequest request;
+  final bool showRankHighlight;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final feed = ref.watch(searchResultFeedControllerProvider(request));
     final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
 
     return feed.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stackTrace) => Center(
+      loading: () => const Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(48),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.cloud_off_rounded,
-                size: 48,
-                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+              SizedBox(
+                width: 32,
+                height: 32,
+                child: CircularProgressIndicator(strokeWidth: 3),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 16),
+              Text('検索中...'),
+            ],
+          ),
+        ),
+      ),
+      error: (error, stackTrace) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: colorScheme.errorContainer.withValues(alpha: 0.3),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.cloud_off_rounded,
+                  size: 32,
+                  color: colorScheme.error.withValues(alpha: 0.7),
+                ),
+              ),
+              const SizedBox(height: 16),
               Text(
                 '検索結果の取得に失敗しました',
-                style: Theme.of(context).textTheme.bodyLarge,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
                 error.toString(),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                style: theme.textTheme.bodySmall?.copyWith(
                   color: colorScheme.onSurfaceVariant,
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               FilledButton.tonalIcon(
-                onPressed: () =>
-                    ref.invalidate(searchResultFeedControllerProvider(request)),
+                onPressed: () => ref
+                    .invalidate(searchResultFeedControllerProvider(request)),
                 icon: const Icon(Icons.refresh_rounded),
                 label: const Text('再試行'),
               ),
@@ -56,7 +88,44 @@ class SearchResultList extends ConsumerWidget {
       ),
       data: (state) {
         if (state.items.isEmpty) {
-          return const Center(child: Text('該当する作品はありません。'));
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest
+                          .withValues(alpha: 0.5),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.search_off_rounded,
+                      size: 32,
+                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    '該当する作品が見つかりませんでした',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '別のキーワードやジャンルで検索してみてください',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
         }
 
         return NotificationListener<ScrollNotification>(
@@ -88,22 +157,34 @@ class SearchResultList extends ConsumerWidget {
                 return RankingItemCard(
                   novel: novel,
                   rank: index + 1,
+                  showRankHighlight: showRankHighlight,
                   onTap: () => context.push('/narou/novel/${novel.id}'),
                 );
               }
 
               if (state.loadMoreErrorMessage != null) {
                 return Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 20,
+                  ),
                   child: Center(
                     child: Column(
                       children: [
-                        Text(
-                          '読み込みに失敗しました',
-                          style: Theme.of(context).textTheme.bodySmall,
+                        Icon(
+                          Icons.error_outline_rounded,
+                          size: 20,
+                          color: colorScheme.error.withValues(alpha: 0.6),
                         ),
                         const SizedBox(height: 8),
-                        TextButton(
+                        Text(
+                          '読み込みに失敗しました',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextButton.icon(
                           onPressed: () => ref
                               .read(
                                 searchResultFeedControllerProvider(
@@ -111,7 +192,8 @@ class SearchResultList extends ConsumerWidget {
                                 ).notifier,
                               )
                               .loadNextPage(),
-                          child: const Text('再試行'),
+                          icon: const Icon(Icons.refresh_rounded, size: 16),
+                          label: const Text('再試行'),
                         ),
                       ],
                     ),
