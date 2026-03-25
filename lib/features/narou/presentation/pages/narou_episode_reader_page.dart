@@ -488,7 +488,11 @@ class _NarouEpisodeReaderPageState
         initialValue: currentPage,
       ),
     ).then((page) {
-      if (page != null) {
+      if (page != null && mounted) {
+        setState(() {
+          _controlsVisible = false;
+        });
+        _applyFullscreenMode();
         unawaited(_kumihanController.showPage(page - 1));
       }
     });
