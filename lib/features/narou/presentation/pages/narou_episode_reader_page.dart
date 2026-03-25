@@ -335,6 +335,7 @@ class _NarouEpisodeReaderPageState
                                             startPosition:
                                                 _EpisodeStartPosition.lastPage,
                                           ),
+                                    iconAlignment: IconAlignment.end,
                                     icon: const Icon(Icons.skip_next),
                                     label: const Text('前の話'),
                                   ),

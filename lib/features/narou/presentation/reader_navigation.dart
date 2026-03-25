@@ -9,7 +9,8 @@ ReaderTapAction resolveReaderTapAction({
   required double normalizedY,
 }) {
   return switch (pattern) {
-    ReaderTapPattern.leftCenterRight => _resolveTapActionFromAxis(normalizedX),
+    // 縦書き：左が進む・右が戻る
+    ReaderTapPattern.leftCenterRight => _resolveTapActionFromAxis(1 - normalizedX),
     ReaderTapPattern.topCenterBottom => _resolveTapActionFromAxis(normalizedY),
   };
 }
