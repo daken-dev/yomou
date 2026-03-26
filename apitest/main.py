@@ -8,12 +8,23 @@ from kakuyomu import (
 )
 from narou import parse_episode_page, parse_info_page, parse_toc_page
 from narou.parser_common import print_json
+from novelup import (
+    parse_episode_page as parse_novelup_episode_page,
+    parse_ranking_page as parse_novelup_ranking_page,
+    parse_search_page as parse_novelup_search_page,
+    parse_toc_page as parse_novelup_toc_page,
+)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("site", nargs="?", default="narou", choices=["narou", "kakuyomu", "hameln"])
-    parser.add_argument("page_type", choices=["info", "search", "toc", "episode"])
+    parser.add_argument(
+        "site",
+        nargs="?",
+        default="narou",
+        choices=["narou", "kakuyomu", "hameln", "novelup"],
+    )
+    parser.add_argument("page_type", choices=["info", "search", "toc", "episode", "ranking"])
     parser.add_argument("url")
     args = parser.parse_args()
 
@@ -36,10 +47,22 @@ def main() -> None:
         else:
             raise ValueError("Kakuyomu parser does not support info page parsing.")
     else:
-        if args.page_type == "search":
-            data = parse_hameln_search_page(args.url)
+        if args.site == "hameln":
+            if args.page_type == "search":
+                data = parse_hameln_search_page(args.url)
+            else:
+                raise ValueError("Hameln parser currently supports only search page parsing.")
         else:
-            raise ValueError("Hameln parser currently supports only search page parsing.")
+            if args.page_type == "search":
+                data = parse_novelup_search_page(args.url)
+            elif args.page_type == "toc":
+                data = parse_novelup_toc_page(args.url)
+            elif args.page_type == "episode":
+                data = parse_novelup_episode_page(args.url)
+            elif args.page_type == "ranking":
+                data = parse_novelup_ranking_page(args.url)
+            else:
+                raise ValueError("NovelUp parser does not support info page parsing.")
 
     print_json(data)
 

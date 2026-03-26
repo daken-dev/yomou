@@ -138,62 +138,71 @@ class _AozoraEpisodeReaderPageState
                         _handleSnapshotChanged(snapshot: snapshot),
                   ),
                 ),
-                Positioned.fill(
-                  child: IgnorePointer(
-                    ignoring: !_controlsVisible,
-                    child: AnimatedOpacity(
-                      duration: const Duration(milliseconds: 160),
-                      opacity: _controlsVisible ? 1 : 0,
-                      child: ColoredBox(
-                        color: Colors.black.withValues(alpha: 0.14),
-                        child: GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: _toggleControls,
-                          child: SafeArea(
-                            child: Align(
-                              alignment: Alignment.topCenter,
-                              child: Container(
-                                margin: const EdgeInsets.all(16),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 10,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.55),
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                child: Row(
-                                  children: [
-                                    IconButton(
-                                      onPressed: () => context.pop(),
-                                      icon: const Icon(
-                                        Icons.arrow_back,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: Text(
-                                        data.author == null
-                                            ? data.title
-                                            : '${data.title} / ${data.author}',
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
+                Builder(builder: (context) {
+                  final isDarkReader =
+                      readerTheme.paperColor.computeLuminance() < 0.5;
+                  final overlayBase =
+                      isDarkReader ? Colors.white : Colors.black;
+                  final overlayFg =
+                      isDarkReader ? Colors.black : Colors.white;
+                  return Positioned.fill(
+                    child: IgnorePointer(
+                      ignoring: !_controlsVisible,
+                      child: AnimatedOpacity(
+                        duration: const Duration(milliseconds: 160),
+                        opacity: _controlsVisible ? 1 : 0,
+                        child: ColoredBox(
+                          color: overlayBase.withValues(alpha: 0.14),
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: _toggleControls,
+                            child: SafeArea(
+                              child: Align(
+                                alignment: Alignment.topCenter,
+                                child: Container(
+                                  margin: const EdgeInsets.all(16),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 10,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        overlayBase.withValues(alpha: 0.55),
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      IconButton(
+                                        onPressed: () => context.pop(),
+                                        icon: Icon(
+                                          Icons.arrow_back,
+                                          color: overlayFg,
                                         ),
                                       ),
-                                    ),
-                                    IconButton(
-                                      onPressed: () =>
-                                          context.push('/settings/reader'),
-                                      icon: const Icon(
-                                        Icons.settings,
-                                        color: Colors.white,
+                                      Expanded(
+                                        child: Text(
+                                          data.author == null
+                                              ? data.title
+                                              : '${data.title} / ${data.author}',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            color: overlayFg,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                      IconButton(
+                                        onPressed: () =>
+                                            context.push('/settings/reader'),
+                                        icon: Icon(
+                                          Icons.settings,
+                                          color: overlayFg,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
@@ -201,8 +210,8 @@ class _AozoraEpisodeReaderPageState
                         ),
                       ),
                     ),
-                  ),
-                ),
+                  );
+                }),
               ],
             );
           },

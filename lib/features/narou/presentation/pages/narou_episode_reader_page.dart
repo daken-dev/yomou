@@ -146,6 +146,11 @@ class _NarouEpisodeReaderPageState
     required KumihanThemeData readerTheme,
   }) {
     _latestData = data;
+    final isDarkReader = readerTheme.paperColor.computeLuminance() < 0.5;
+    final overlayBase = isDarkReader ? Colors.white : Colors.black;
+    final overlayFg = isDarkReader ? Colors.black : Colors.white;
+    final overlayFgDim =
+        isDarkReader ? Colors.black54 : Colors.white70;
     final document = _documentFor(data: data, readerSettings: readerSettings);
     final isLandscape =
         MediaQuery.orientationOf(context) == Orientation.landscape;
@@ -199,7 +204,7 @@ class _NarouEpisodeReaderPageState
               duration: const Duration(milliseconds: 160),
               opacity: _controlsVisible ? 1 : 0,
               child: ColoredBox(
-                color: Colors.black.withValues(alpha: 0.14),
+                color: overlayBase.withValues(alpha: 0.14),
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: _toggleControls,
@@ -215,16 +220,16 @@ class _NarouEpisodeReaderPageState
                               vertical: 10,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.55),
+                              color: overlayBase.withValues(alpha: 0.55),
                               borderRadius: BorderRadius.circular(14),
                             ),
                             child: Row(
                               children: [
                                 IconButton(
                                   onPressed: () => context.pop(),
-                                  icon: const Icon(
+                                  icon: Icon(
                                     Icons.arrow_back,
-                                    color: Colors.white,
+                                    color: overlayFg,
                                   ),
                                 ),
                                 const SizedBox(width: 4),
@@ -238,8 +243,8 @@ class _NarouEpisodeReaderPageState
                                         novelTitle,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          color: Colors.white70,
+                                        style: TextStyle(
+                                          color: overlayFgDim,
                                           fontSize: 12,
                                         ),
                                       ),
@@ -247,8 +252,8 @@ class _NarouEpisodeReaderPageState
                                         pageTitle,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          color: Colors.white,
+                                        style: TextStyle(
+                                          color: overlayFg,
                                           fontSize: 16,
                                           fontWeight: FontWeight.w600,
                                         ),
@@ -271,15 +276,15 @@ class _NarouEpisodeReaderPageState
                                       vertical: 4,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withValues(
+                                      color: overlayFg.withValues(
                                         alpha: 0.1,
                                       ),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
                                       pageLabel,
-                                      style: const TextStyle(
-                                        color: Colors.white,
+                                      style: TextStyle(
+                                        color: overlayFg,
                                         fontSize: 13,
                                         fontWeight: FontWeight.w600,
                                       ),
@@ -289,9 +294,9 @@ class _NarouEpisodeReaderPageState
                                 IconButton(
                                   onPressed: () =>
                                       context.push('/settings/reader'),
-                                  icon: const Icon(
+                                  icon: Icon(
                                     Icons.settings,
-                                    color: Colors.white,
+                                    color: overlayFg,
                                   ),
                                   tooltip: 'リーダー設定',
                                 ),
@@ -308,7 +313,7 @@ class _NarouEpisodeReaderPageState
                               vertical: 12,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.55),
+                              color: overlayBase.withValues(alpha: 0.55),
                               borderRadius: BorderRadius.circular(16),
                             ),
                             child: Row(
@@ -325,6 +330,9 @@ class _NarouEpisodeReaderPageState
                                           ),
                                     icon: const Icon(Icons.skip_previous),
                                     label: const Text('次の話'),
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: overlayFg,
+                                    ),
                                   ),
                                 ),
                                 if (episodeLabel != null)
@@ -341,15 +349,15 @@ class _NarouEpisodeReaderPageState
                                         vertical: 6,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: Colors.white.withValues(
+                                        color: overlayFg.withValues(
                                           alpha: 0.1,
                                         ),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
                                         episodeLabel,
-                                        style: const TextStyle(
-                                          color: Colors.white,
+                                        style: TextStyle(
+                                          color: overlayFg,
                                           fontSize: 13,
                                           fontWeight: FontWeight.w600,
                                         ),
@@ -369,6 +377,9 @@ class _NarouEpisodeReaderPageState
                                     iconAlignment: IconAlignment.end,
                                     icon: const Icon(Icons.skip_next),
                                     label: const Text('前の話'),
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: overlayFg,
+                                    ),
                                   ),
                                 ),
                               ],
