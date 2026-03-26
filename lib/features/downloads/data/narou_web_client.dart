@@ -4,8 +4,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:html/dom.dart';
 import 'package:html/parser.dart' as html_parser;
-import 'package:yomou/features/novels/domain/entities/novel_site.dart';
 import 'package:yomou/core/network/dio_provider.dart';
+import 'package:yomou/features/novels/domain/entities/novel_site.dart';
 
 final narouWebClientProvider = Provider<NarouWebClient>((ref) {
   return NarouWebClient(ref.watch(dioProvider));
