@@ -59,110 +59,135 @@ class AppNavigationPane extends StatelessWidget {
                 currentLocation: currentLocation,
                 onTap: () => _go(context, '/'),
               ),
-              const _SectionHeader(title: 'なろう'),
-              _DrawerItem(
-                icon: Icons.trending_up_outlined,
-                selectedIcon: Icons.trending_up,
-                label: 'ランキング',
-                location: '/narou/ranking',
+              _SiteSection(
+                title: 'なろう',
+                routePrefix: '/narou/',
                 currentLocation: currentLocation,
-                onTap: () => _go(context, '/narou/ranking'),
-                indent: true,
+                children: [
+                  _DrawerItem(
+                    icon: Icons.trending_up_outlined,
+                    selectedIcon: Icons.trending_up,
+                    label: 'ランキング',
+                    location: '/narou/ranking',
+                    currentLocation: currentLocation,
+                    onTap: () => _go(context, '/narou/ranking'),
+                  ),
+                  _DrawerItem(
+                    icon: Icons.search_outlined,
+                    selectedIcon: Icons.search,
+                    label: '検索',
+                    location: '/narou/search',
+                    currentLocation: currentLocation,
+                    onTap: () => _go(context, '/narou/search'),
+                  ),
+                ],
               ),
-              _DrawerItem(
-                icon: Icons.search_outlined,
-                selectedIcon: Icons.search,
-                label: '検索',
-                location: '/narou/search',
+              _SiteSection(
+                title: 'なろうR18',
+                routePrefix: '/narou-r18/',
                 currentLocation: currentLocation,
-                onTap: () => _go(context, '/narou/search'),
-                indent: true,
+                children: [
+                  _DrawerItem(
+                    icon: Icons.trending_up_outlined,
+                    selectedIcon: Icons.trending_up,
+                    label: 'ランキング',
+                    location: '/narou-r18/ranking',
+                    currentLocation: currentLocation,
+                    onTap: () => _go(context, '/narou-r18/ranking'),
+                  ),
+                  _DrawerItem(
+                    icon: Icons.search_outlined,
+                    selectedIcon: Icons.search,
+                    label: '検索',
+                    location: '/narou-r18/search',
+                    currentLocation: currentLocation,
+                    onTap: () => _go(context, '/narou-r18/search'),
+                  ),
+                ],
               ),
-              const _SectionHeader(title: 'なろうR18'),
-              _DrawerItem(
-                icon: Icons.trending_up_outlined,
-                selectedIcon: Icons.trending_up,
-                label: 'ランキング',
-                location: '/narou-r18/ranking',
+              _SiteSection(
+                title: 'カクヨム',
+                routePrefix: '/kakuyomu/',
                 currentLocation: currentLocation,
-                onTap: () => _go(context, '/narou-r18/ranking'),
-                indent: true,
+                children: [
+                  _DrawerItem(
+                    icon: Icons.trending_up_outlined,
+                    selectedIcon: Icons.trending_up,
+                    label: 'ランキング',
+                    location: '/kakuyomu/ranking',
+                    currentLocation: currentLocation,
+                    onTap: () => _go(context, '/kakuyomu/ranking'),
+                  ),
+                  _DrawerItem(
+                    icon: Icons.search_outlined,
+                    selectedIcon: Icons.search,
+                    label: '検索',
+                    location: '/kakuyomu/search',
+                    currentLocation: currentLocation,
+                    onTap: () => _go(context, '/kakuyomu/search'),
+                  ),
+                ],
               ),
-              _DrawerItem(
-                icon: Icons.search_outlined,
-                selectedIcon: Icons.search,
-                label: '検索',
-                location: '/narou-r18/search',
+              _SiteSection(
+                title: 'ノベルアップ+',
+                routePrefix: '/novelup/',
                 currentLocation: currentLocation,
-                onTap: () => _go(context, '/narou-r18/search'),
-                indent: true,
+                children: [
+                  _DrawerItem(
+                    icon: Icons.trending_up_outlined,
+                    selectedIcon: Icons.trending_up,
+                    label: 'ランキング',
+                    location: '/novelup/ranking',
+                    currentLocation: currentLocation,
+                    onTap: () => _go(context, '/novelup/ranking'),
+                  ),
+                  _DrawerItem(
+                    icon: Icons.search_outlined,
+                    selectedIcon: Icons.search,
+                    label: '検索',
+                    location: '/novelup/search',
+                    currentLocation: currentLocation,
+                    onTap: () => _go(context, '/novelup/search'),
+                  ),
+                ],
               ),
-              const _SectionHeader(title: 'カクヨム'),
-              _DrawerItem(
-                icon: Icons.trending_up_outlined,
-                selectedIcon: Icons.trending_up,
-                label: 'ランキング',
-                location: '/kakuyomu/ranking',
+              _SiteSection(
+                title: 'ハーメルン',
+                routePrefix: '/hameln/',
                 currentLocation: currentLocation,
-                onTap: () => _go(context, '/kakuyomu/ranking'),
-                indent: true,
+                children: [
+                  _DrawerItem(
+                    icon: Icons.trending_up_outlined,
+                    selectedIcon: Icons.trending_up,
+                    label: 'ランキング',
+                    location: '/hameln/ranking',
+                    currentLocation: currentLocation,
+                    onTap: () => _go(context, '/hameln/ranking'),
+                  ),
+                  _DrawerItem(
+                    icon: Icons.search_outlined,
+                    selectedIcon: Icons.search,
+                    label: '検索',
+                    location: '/hameln/search',
+                    currentLocation: currentLocation,
+                    onTap: () => _go(context, '/hameln/search'),
+                  ),
+                ],
               ),
-              _DrawerItem(
-                icon: Icons.search_outlined,
-                selectedIcon: Icons.search,
-                label: '検索',
-                location: '/kakuyomu/search',
+              _SiteSection(
+                title: '青空文庫',
+                routePrefix: '/aozora/',
                 currentLocation: currentLocation,
-                onTap: () => _go(context, '/kakuyomu/search'),
-                indent: true,
-              ),
-              const _SectionHeader(title: 'ノベルアップ+'),
-              _DrawerItem(
-                icon: Icons.trending_up_outlined,
-                selectedIcon: Icons.trending_up,
-                label: 'ランキング',
-                location: '/novelup/ranking',
-                currentLocation: currentLocation,
-                onTap: () => _go(context, '/novelup/ranking'),
-                indent: true,
-              ),
-              _DrawerItem(
-                icon: Icons.search_outlined,
-                selectedIcon: Icons.search,
-                label: '検索',
-                location: '/novelup/search',
-                currentLocation: currentLocation,
-                onTap: () => _go(context, '/novelup/search'),
-                indent: true,
-              ),
-              const _SectionHeader(title: 'ハーメルン'),
-              _DrawerItem(
-                icon: Icons.trending_up_outlined,
-                selectedIcon: Icons.trending_up,
-                label: 'ランキング',
-                location: '/hameln/ranking',
-                currentLocation: currentLocation,
-                onTap: () => _go(context, '/hameln/ranking'),
-                indent: true,
-              ),
-              _DrawerItem(
-                icon: Icons.search_outlined,
-                selectedIcon: Icons.search,
-                label: '検索',
-                location: '/hameln/search',
-                currentLocation: currentLocation,
-                onTap: () => _go(context, '/hameln/search'),
-                indent: true,
-              ),
-              const _SectionHeader(title: '青空文庫'),
-              _DrawerItem(
-                icon: Icons.menu_book_outlined,
-                selectedIcon: Icons.menu_book,
-                label: '検索',
-                location: '/aozora/search',
-                currentLocation: currentLocation,
-                onTap: () => _go(context, '/aozora/search'),
-                indent: true,
+                children: [
+                  _DrawerItem(
+                    icon: Icons.menu_book_outlined,
+                    selectedIcon: Icons.menu_book,
+                    label: '検索',
+                    location: '/aozora/search',
+                    currentLocation: currentLocation,
+                    onTap: () => _go(context, '/aozora/search'),
+                  ),
+                ],
               ),
               const Divider(height: 1),
               _DrawerItem(
@@ -197,23 +222,76 @@ class AppNavigationPane extends StatelessWidget {
   }
 }
 
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title});
+class _SiteSection extends StatefulWidget {
+  const _SiteSection({
+    required this.title,
+    required this.routePrefix,
+    required this.currentLocation,
+    required this.children,
+  });
 
   final String title;
+  final String routePrefix;
+  final String currentLocation;
+  final List<Widget> children;
+
+  @override
+  State<_SiteSection> createState() => _SiteSectionState();
+}
+
+class _SiteSectionState extends State<_SiteSection> {
+  late final ExpansibleController _controller;
+
+  bool get _isActive => widget.currentLocation.startsWith(widget.routePrefix);
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = ExpansibleController();
+    if (_isActive) {
+      _controller.expand();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _SiteSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_isActive || oldWidget.currentLocation == widget.currentLocation) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _controller.expand();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-      child: Text(
-        title,
+    final isActive = _isActive;
+
+    return ExpansionTile(
+      controller: _controller,
+      initiallyExpanded: isActive,
+      tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+      childrenPadding: const EdgeInsets.only(left: 12),
+      title: Text(
+        widget.title,
         style: theme.textTheme.labelLarge?.copyWith(
-          color: theme.colorScheme.primary,
+          color: isActive
+              ? theme.colorScheme.primary
+              : theme.colorScheme.onSurfaceVariant,
           fontWeight: FontWeight.w600,
         ),
       ),
+      children: widget.children,
     );
   }
 }
@@ -226,7 +304,6 @@ class _DrawerItem extends StatelessWidget {
     required this.location,
     required this.currentLocation,
     required this.onTap,
-    this.indent = false,
   });
 
   final IconData icon;
@@ -235,7 +312,6 @@ class _DrawerItem extends StatelessWidget {
   final String location;
   final String currentLocation;
   final VoidCallback onTap;
-  final bool indent;
 
   @override
   Widget build(BuildContext context) {
@@ -244,27 +320,24 @@ class _DrawerItem extends StatelessWidget {
         (location != '/' && currentLocation.startsWith(location));
     final theme = Theme.of(context);
 
-    return Padding(
-      padding: EdgeInsets.only(left: indent ? 12 : 0),
-      child: ListTile(
-        leading: Icon(
-          isSelected ? selectedIcon : icon,
+    return ListTile(
+      leading: Icon(
+        isSelected ? selectedIcon : icon,
+        color: isSelected ? theme.colorScheme.primary : null,
+      ),
+      title: Text(
+        label,
+        style: TextStyle(
+          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
           color: isSelected ? theme.colorScheme.primary : null,
         ),
-        title: Text(
-          label,
-          style: TextStyle(
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-            color: isSelected ? theme.colorScheme.primary : null,
-          ),
-        ),
-        selected: isSelected,
-        selectedTileColor: theme.colorScheme.primaryContainer.withValues(
-          alpha: 0.3,
-        ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        onTap: onTap,
       ),
+      selected: isSelected,
+      selectedTileColor: theme.colorScheme.primaryContainer.withValues(
+        alpha: 0.3,
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      onTap: onTap,
     );
   }
 }
