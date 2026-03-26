@@ -1,22 +1,39 @@
 import argparse
 
+from kakuyomu import (
+    parse_episode_page as parse_kakuyomu_episode_page,
+    parse_search_page as parse_kakuyomu_search_page,
+    parse_toc_page as parse_kakuyomu_toc_page,
+)
 from narou import parse_episode_page, parse_info_page, parse_toc_page
 from narou.parser_common import print_json
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("site", nargs="?", default="narou", choices=["narou"])
-    parser.add_argument("page_type", choices=["info", "toc", "episode"])
+    parser.add_argument("site", nargs="?", default="narou", choices=["narou", "kakuyomu"])
+    parser.add_argument("page_type", choices=["info", "search", "toc", "episode"])
     parser.add_argument("url")
     args = parser.parse_args()
 
-    if args.page_type == "info":
-        data = parse_info_page(args.url)
-    elif args.page_type == "toc":
-        data = parse_toc_page(args.url)
+    if args.site == "narou":
+        if args.page_type == "info":
+            data = parse_info_page(args.url)
+        elif args.page_type == "toc":
+            data = parse_toc_page(args.url)
+        elif args.page_type == "episode":
+            data = parse_episode_page(args.url)
+        else:
+            raise ValueError("Narou parser does not support search page parsing.")
     else:
-        data = parse_episode_page(args.url)
+        if args.page_type == "search":
+            data = parse_kakuyomu_search_page(args.url)
+        elif args.page_type == "toc":
+            data = parse_kakuyomu_toc_page(args.url)
+        elif args.page_type == "episode":
+            data = parse_kakuyomu_episode_page(args.url)
+        else:
+            raise ValueError("Kakuyomu parser does not support info page parsing.")
 
     print_json(data)
 
