@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:yomou/features/kakuyomu/domain/entities/kakuyomu_genre.dart';
 import 'package:yomou/features/narou/domain/entities/narou_genre.dart';
 import 'package:yomou/features/navigation/presentation/widgets/app_scaffold.dart';
 import 'package:yomou/features/novels/domain/entities/novel_search_order.dart';
@@ -81,7 +82,7 @@ class NarouSearchResultsPage extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
               child: Row(
                 children: [
-                  for (final value in NovelSearchOrderX.selectableValues)
+                  for (final value in _searchOrdersFor(request.site))
                     Padding(
                       padding: const EdgeInsets.only(right: 6),
                       child: FilterChip(
@@ -134,6 +135,20 @@ class NarouSearchResultsPage extends StatelessWidget {
     if (code == null) {
       return '全ジャンル';
     }
+    if (request.site == NovelSite.kakuyomu) {
+      return KakuyomuGenre.labelOfCode(code);
+    }
     return NarouGenre.labelOf(code);
   }
+}
+
+List<NovelSearchOrder> _searchOrdersFor(NovelSite site) {
+  return switch (site) {
+    NovelSite.kakuyomu => const <NovelSearchOrder>[
+      NovelSearchOrder.newest,
+      NovelSearchOrder.weeklyPoint,
+      NovelSearchOrder.overallPoint,
+    ],
+    _ => NovelSearchOrderX.selectableValues,
+  };
 }

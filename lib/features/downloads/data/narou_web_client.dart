@@ -18,7 +18,12 @@ String narouBaseUrlForSite(NovelSite site) {
   return switch (site) {
     NovelSite.narou => narouBaseUrl,
     NovelSite.narouR18 => narouR18BaseUrl,
-    NovelSite.aozora => throw UnsupportedError('Aozora does not use Narou web client'),
+    NovelSite.kakuyomu => throw UnsupportedError(
+      'Kakuyomu does not use Narou web client',
+    ),
+    NovelSite.aozora => throw UnsupportedError(
+      'Aozora does not use Narou web client',
+    ),
   };
 }
 
@@ -71,10 +76,7 @@ class NarouWebClient {
     return NarouEpisodePage.fromDocument(url: resolvedUrl, document: document);
   }
 
-  String buildInfoUrl(
-    String novelId, {
-    NovelSite site = NovelSite.narou,
-  }) {
+  String buildInfoUrl(String novelId, {NovelSite site = NovelSite.narou}) {
     final baseUrl = narouBaseUrlForSite(site);
     return '$baseUrl/novelview/infotop/ncode/${novelId.toLowerCase()}/';
   }

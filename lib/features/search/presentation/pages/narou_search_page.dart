@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:yomou/features/kakuyomu/domain/entities/kakuyomu_genre.dart';
 import 'package:yomou/features/narou/domain/entities/narou_genre.dart';
 import 'package:yomou/features/navigation/presentation/widgets/app_scaffold.dart';
 import 'package:yomou/features/novels/domain/entities/novel_search_order.dart';
@@ -37,6 +38,9 @@ class _NarouSearchPageState extends State<NarouSearchPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final supportsTarget = widget.site != NovelSite.kakuyomu;
+    final supportsGenre = true;
+    final genreItems = _genreOptions(widget.site);
 
     return AppScaffold(
       title: '検索',
@@ -51,7 +55,9 @@ class _NarouSearchPageState extends State<NarouSearchPage> {
               controller: _queryController,
               decoration: InputDecoration(
                 filled: true,
-                fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                fillColor: colorScheme.surfaceContainerHighest.withValues(
+                  alpha: 0.5,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
@@ -76,7 +82,9 @@ class _NarouSearchPageState extends State<NarouSearchPage> {
                     );
                   },
                 ),
-                hintText: '作品名、あらすじ、キーワードなど',
+                hintText: widget.site == NovelSite.kakuyomu
+                    ? '作品名やキーワード'
+                    : '作品名、あらすじ、キーワードなど',
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 14,
@@ -88,76 +96,49 @@ class _NarouSearchPageState extends State<NarouSearchPage> {
 
             const SizedBox(height: 24),
 
-            // Search target section
-            _SectionLabel(label: '検索範囲', colorScheme: colorScheme),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<NovelSearchTarget>(
-              initialValue: _target,
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: colorScheme.primary, width: 2),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
-                ),
+            if (supportsTarget) ...[
+              _SectionLabel(label: '検索範囲', colorScheme: colorScheme),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<NovelSearchTarget>(
+                initialValue: _target,
+                decoration: _inputDecoration(colorScheme),
+                items: [
+                  for (final value in NovelSearchTargetX.selectableValues)
+                    DropdownMenuItem<NovelSearchTarget>(
+                      value: value,
+                      child: Text(value.label),
+                    ),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() => _target = value);
+                  }
+                },
               ),
-              items: [
-                for (final value in NovelSearchTargetX.selectableValues)
-                  DropdownMenuItem<NovelSearchTarget>(
-                    value: value,
-                    child: Text(value.label),
+              const SizedBox(height: 24),
+            ],
+
+            if (supportsGenre) ...[
+              _SectionLabel(label: 'ジャンル', colorScheme: colorScheme),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<int?>(
+                initialValue: _genreCode,
+                decoration: _inputDecoration(colorScheme),
+                items: [
+                  const DropdownMenuItem<int?>(
+                    value: null,
+                    child: Text('指定なし'),
                   ),
-              ],
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() => _target = value);
-                }
-              },
-            ),
-
-            const SizedBox(height: 24),
-
-            // Genre section
-            _SectionLabel(label: 'ジャンル', colorScheme: colorScheme),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<int?>(
-              initialValue: _genreCode,
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: colorScheme.primary, width: 2),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
-                ),
+                  for (final genre in genreItems)
+                    DropdownMenuItem<int?>(
+                      value: genre.code,
+                      child: Text(genre.label),
+                    ),
+                ],
+                onChanged: (value) => setState(() => _genreCode = value),
               ),
-              items: [
-                const DropdownMenuItem<int?>(value: null, child: Text('指定なし')),
-                for (final genre in NarouGenre.values)
-                  DropdownMenuItem<int?>(
-                    value: genre.code,
-                    child: Text(genre.label),
-                  ),
-              ],
-              onChanged: (value) => setState(() => _genreCode = value),
-            ),
-
-            const SizedBox(height: 32),
+              const SizedBox(height: 32),
+            ],
 
             // Search button
             FilledButton.icon(
@@ -209,6 +190,35 @@ class _NarouSearchPageState extends State<NarouSearchPage> {
     ).toString();
     context.push(location);
   }
+}
+
+InputDecoration _inputDecoration(ColorScheme colorScheme) {
+  return InputDecoration(
+    filled: true,
+    fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide.none,
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(color: colorScheme.primary, width: 2),
+    ),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+  );
+}
+
+List<({int code, String label})> _genreOptions(NovelSite site) {
+  return switch (site) {
+    NovelSite.kakuyomu => [
+      for (final genre in KakuyomuGenre.values)
+        (code: genre.code, label: genre.label),
+    ],
+    _ => [
+      for (final genre in NarouGenre.values)
+        (code: genre.code, label: genre.label),
+    ],
+  };
 }
 
 class _SectionLabel extends StatelessWidget {

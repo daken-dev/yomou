@@ -78,8 +78,8 @@ class SearchResultList extends ConsumerWidget {
               ),
               const SizedBox(height: 20),
               FilledButton.tonalIcon(
-                onPressed: () => ref
-                    .invalidate(searchResultFeedControllerProvider(request)),
+                onPressed: () =>
+                    ref.invalidate(searchResultFeedControllerProvider(request)),
                 icon: const Icon(Icons.refresh_rounded),
                 label: const Text('再試行'),
               ),
@@ -99,14 +99,17 @@ class SearchResultList extends ConsumerWidget {
                     width: 64,
                     height: 64,
                     decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerHighest
-                          .withValues(alpha: 0.5),
+                      color: colorScheme.surfaceContainerHighest.withValues(
+                        alpha: 0.5,
+                      ),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       Icons.search_off_rounded,
                       size: 32,
-                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                      color: colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.5,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -159,7 +162,8 @@ class SearchResultList extends ConsumerWidget {
                   novel: novel,
                   rank: index + 1,
                   showRankHighlight: showRankHighlight,
-                  onTap: () => context.push(_detailLocation(novel.site, novel.id)),
+                  onTap: () =>
+                      context.push(_detailLocation(novel.site, novel.id)),
                 );
               }
 
@@ -244,6 +248,7 @@ class SearchResultList extends ConsumerWidget {
     return switch (site) {
       NovelSite.narou => '/narou/novel/$id',
       NovelSite.narouR18 => '/narou-r18/novel/$id',
+      NovelSite.kakuyomu => '/kakuyomu/novel/$id',
       NovelSite.aozora => '/aozora/novel/$id',
     };
   }

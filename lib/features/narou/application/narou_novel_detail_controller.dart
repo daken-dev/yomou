@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:yomou/features/downloads/data/narou_web_client.dart';
+import 'package:yomou/features/kakuyomu/data/kakuyomu_web_client.dart';
 import 'package:yomou/features/novels/domain/entities/novel_site.dart';
 
 final narouNovelDetailControllerProvider =
@@ -21,8 +22,8 @@ class NarouNovelDetailController extends AsyncNotifier<NarouNovelDetailState> {
   Future<NarouNovelDetailState> build() async {
     _site = _args.site;
     _novelId = _args.novelId;
-    final infoFuture = _client.fetchInfoPage(_novelId, site: _site);
-    final tocPage = await _client.fetchTocPage(_novelId, site: _site);
+    final infoFuture = _fetchInfoPage();
+    final tocPage = await _fetchTocPage();
     final infoPage = await infoFuture;
 
     return NarouNovelDetailState(
@@ -50,9 +51,7 @@ class NarouNovelDetailController extends AsyncNotifier<NarouNovelDetailState> {
     );
 
     try {
-      final tocPage = await _client.fetchTocPage(
-        _novelId,
-        site: _site,
+      final tocPage = await _fetchTocPage(
         page: currentState.currentPage + 1,
         inheritedChapterTitle: currentState.lastChapterTitle,
       );
@@ -83,6 +82,28 @@ class NarouNovelDetailController extends AsyncNotifier<NarouNovelDetailState> {
   }
 
   NarouWebClient get _client => ref.read(narouWebClientProvider);
+
+  Future<NarouInfoPage> _fetchInfoPage() {
+    if (_site == NovelSite.kakuyomu) {
+      return ref.read(kakuyomuWebClientProvider).fetchInfoPage(_novelId);
+    }
+    return _client.fetchInfoPage(_novelId, site: _site);
+  }
+
+  Future<NarouTocPage> _fetchTocPage({
+    int page = 1,
+    String? inheritedChapterTitle,
+  }) {
+    if (_site == NovelSite.kakuyomu) {
+      return ref.read(kakuyomuWebClientProvider).fetchTocPage(_novelId);
+    }
+    return _client.fetchTocPage(
+      _novelId,
+      site: _site,
+      page: page,
+      inheritedChapterTitle: inheritedChapterTitle,
+    );
+  }
 
   List<NarouNovelDetailListItem> _mapEntries(List<NarouTocEntry> entries) {
     return entries

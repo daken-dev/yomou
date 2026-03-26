@@ -1496,6 +1496,7 @@ class DownloadStore {
         'https://ncode.syosetu.com/novelview/infotop/ncode/${novelId.toLowerCase()}/',
       NovelSite.narouR18 =>
         'https://novel18.syosetu.com/novelview/infotop/ncode/${novelId.toLowerCase()}/',
+      NovelSite.kakuyomu => 'https://kakuyomu.jp/works/$novelId',
       NovelSite.aozora => null,
     };
   }
@@ -1505,6 +1506,7 @@ class DownloadStore {
       NovelSite.narou => 'https://ncode.syosetu.com/${novelId.toLowerCase()}/',
       NovelSite.narouR18 =>
         'https://novel18.syosetu.com/${novelId.toLowerCase()}/',
+      NovelSite.kakuyomu => 'https://kakuyomu.jp/works/$novelId',
       NovelSite.aozora => null,
     };
   }

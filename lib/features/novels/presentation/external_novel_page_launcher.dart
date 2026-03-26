@@ -2,18 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:yomou/features/novels/domain/entities/novel_site.dart';
 
-Future<void> openExternalUrlInBrowser(
-  BuildContext context,
-  String url,
-) async {
+Future<void> openExternalUrlInBrowser(BuildContext context, String url) async {
   final uri = Uri.tryParse(url.trim());
   if (uri == null || (uri.scheme != 'https' && uri.scheme != 'http')) {
     if (!context.mounted) {
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('リンクURLが不正です。')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('リンクURLが不正です。')));
     return;
   }
 
@@ -21,9 +18,9 @@ Future<void> openExternalUrlInBrowser(
   if (launched || !context.mounted) {
     return;
   }
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(content: Text('外部ブラウザを起動できませんでした。')),
-  );
+  ScaffoldMessenger.of(
+    context,
+  ).showSnackBar(const SnackBar(content: Text('外部ブラウザを起動できませんでした。')));
 }
 
 Uri? buildWorkPageUri(NovelSite site, String novelId, {String? aozoraCardUrl}) {
@@ -39,6 +36,12 @@ Uri? buildWorkPageUri(NovelSite site, String novelId, {String? aozoraCardUrl}) {
         return null;
       }
       return Uri.https(host, '/$normalized/');
+    case NovelSite.kakuyomu:
+      final normalized = novelId.trim();
+      if (normalized.isEmpty) {
+        return null;
+      }
+      return Uri.https('kakuyomu.jp', '/works/$normalized');
     case NovelSite.aozora:
       final url = aozoraCardUrl?.trim();
       if (url == null || url.isEmpty) {
@@ -59,9 +62,9 @@ Future<void> openWorkPageInExternalBrowser(
     if (!context.mounted) {
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('作品ページのURLを取得できませんでした。')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('作品ページのURLを取得できませんでした。')));
     return;
   }
 
@@ -69,7 +72,7 @@ Future<void> openWorkPageInExternalBrowser(
   if (launched || !context.mounted) {
     return;
   }
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(content: Text('外部ブラウザを起動できませんでした。')),
-  );
+  ScaffoldMessenger.of(
+    context,
+  ).showSnackBar(const SnackBar(content: Text('外部ブラウザを起動できませんでした。')));
 }

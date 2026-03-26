@@ -24,7 +24,7 @@ class SiteRankingPage extends StatelessWidget {
   final NovelRankingPeriod period;
   final bool isNewest;
 
-  static const _tabs = <({String label, String? periodValue})>[
+  static const _narouTabs = <({String label, String? periodValue})>[
     (label: '新着', periodValue: 'new'),
     (label: '日間', periodValue: 'daily'),
     (label: '週間', periodValue: 'weekly'),
@@ -34,11 +34,19 @@ class SiteRankingPage extends StatelessWidget {
     (label: '総合', periodValue: 'overall'),
   ];
 
+  static const _kakuyomuTabs = <({String label, String? periodValue})>[
+    (label: '新着', periodValue: 'new'),
+    (label: '週間', periodValue: 'weekly'),
+    (label: '総合', periodValue: 'overall'),
+  ];
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final title = isNewest ? '新着一覧' : period.displayName;
+    final effectivePeriod = _effectivePeriod();
+    final title = isNewest ? '新着一覧' : effectivePeriod.displayName;
     final routePrefix = site.routePrefix;
+    final tabs = _tabsFor(site);
 
     return AppScaffold(
       title: title,
@@ -67,19 +75,26 @@ class SiteRankingPage extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: Row(
                 children: [
-                  for (final tab in _tabs)
+                  for (final tab in tabs)
                     Padding(
                       padding: const EdgeInsets.only(right: 6),
                       child: ChoiceChip(
                         label: Text(tab.label),
-                        selected: _isSelected(tab.periodValue),
+                        selected: _isSelected(
+                          tab.periodValue,
+                          effectivePeriod: effectivePeriod,
+                        ),
                         onSelected: (_) => context.go(
                           '$routePrefix/ranking?period=${tab.periodValue}',
                         ),
                         showCheckmark: false,
                         labelStyle: TextStyle(
                           fontSize: 13,
-                          fontWeight: _isSelected(tab.periodValue)
+                          fontWeight:
+                              _isSelected(
+                                tab.periodValue,
+                                effectivePeriod: effectivePeriod,
+                              )
                               ? FontWeight.w600
                               : FontWeight.w400,
                         ),
@@ -102,7 +117,7 @@ class SiteRankingPage extends StatelessWidget {
                     showRankHighlight: false,
                   )
                 : RankingFeedList(
-                    args: RankingFeedArgs(site: site, period: period),
+                    args: RankingFeedArgs(site: site, period: effectivePeriod),
                   ),
           ),
         ],
@@ -110,8 +125,29 @@ class SiteRankingPage extends StatelessWidget {
     );
   }
 
-  bool _isSelected(String? periodValue) {
+  NovelRankingPeriod _effectivePeriod() {
+    if (site != NovelSite.kakuyomu) {
+      return period;
+    }
+    return switch (period) {
+      NovelRankingPeriod.overall => NovelRankingPeriod.overall,
+      NovelRankingPeriod.weekly => NovelRankingPeriod.weekly,
+      _ => NovelRankingPeriod.weekly,
+    };
+  }
+
+  bool _isSelected(
+    String? periodValue, {
+    required NovelRankingPeriod effectivePeriod,
+  }) {
     if (isNewest) return periodValue == 'new';
-    return periodValue == period.queryValue;
+    return periodValue == effectivePeriod.queryValue;
+  }
+
+  List<({String label, String? periodValue})> _tabsFor(NovelSite site) {
+    return switch (site) {
+      NovelSite.kakuyomu => _kakuyomuTabs,
+      _ => _narouTabs,
+    };
   }
 }

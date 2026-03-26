@@ -24,6 +24,9 @@ class NarouApiClient {
   String get _endpoint => switch (site) {
     NovelSite.narou => 'https://api.syosetu.com/novelapi/api/',
     NovelSite.narouR18 => 'https://api.syosetu.com/novel18api/api/',
+    NovelSite.kakuyomu => throw UnsupportedError(
+      'Kakuyomu does not use Narou API',
+    ),
     NovelSite.aozora => throw UnsupportedError('Aozora does not use Narou API'),
   };
 

@@ -8,6 +8,7 @@ import 'package:yomou/features/aozora/data/aozora_index_store.dart';
 import 'package:yomou/features/aozora/data/aozora_text_client.dart';
 import 'package:yomou/features/downloads/application/download_scheduler.dart';
 import 'package:yomou/features/downloads/data/download_store.dart';
+import 'package:yomou/features/kakuyomu/data/kakuyomu_web_client.dart';
 import 'package:yomou/features/downloads/data/narou_web_client.dart';
 import 'package:yomou/features/downloads/domain/entities/download_job_overview.dart';
 import 'package:yomou/features/downloads/domain/entities/download_status_snapshot.dart';
@@ -42,6 +43,7 @@ final downloadSchedulerProvider = Provider<DownloadScheduler>((ref) {
   final scheduler = DownloadScheduler(
     ref.watch(downloadStoreProvider),
     ref.watch(narouWebClientProvider),
+    ref.watch(kakuyomuWebClientProvider),
     ref.watch(aozoraIndexStoreProvider),
     ref.watch(aozoraTextClientProvider),
   );
@@ -86,14 +88,20 @@ final savedNovelsProvider = StreamProvider<List<SavedNovelOverview>>((
 typedef SavedNovelKey = ({NovelSite site, String novelId});
 
 final savedNovelOverviewProvider =
-    StreamProvider.family<SavedNovelOverview?, SavedNovelKey>((ref, key) async* {
+    StreamProvider.family<SavedNovelOverview?, SavedNovelKey>((
+      ref,
+      key,
+    ) async* {
       final store = ref.watch(downloadStoreProvider);
 
       var previous = await store.getSavedNovelOverview(key.site, key.novelId);
       yield previous;
 
       await for (final _ in store.changes) {
-        final current = await store.getSavedNovelOverview(key.site, key.novelId);
+        final current = await store.getSavedNovelOverview(
+          key.site,
+          key.novelId,
+        );
         if (_savedNovelOverviewNullableEquals(previous, current)) {
           continue;
         }

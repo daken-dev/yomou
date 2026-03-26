@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:yomou/features/novels/domain/entities/novel_site.dart';
 import 'package:yomou/features/rankings/application/ranking_feed_controller.dart';
 import 'package:yomou/features/rankings/presentation/widgets/ranking_item_card.dart';
 
@@ -15,9 +16,7 @@ class RankingFeedList extends ConsumerWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return feed.when(
-      loading: () => const Center(
-        child: CircularProgressIndicator(),
-      ),
+      loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, stackTrace) => Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -38,8 +37,8 @@ class RankingFeedList extends ConsumerWidget {
               Text(
                 error.toString(),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
+                  color: colorScheme.onSurfaceVariant,
+                ),
                 textAlign: TextAlign.center,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
@@ -85,7 +84,8 @@ class RankingFeedList extends ConsumerWidget {
                 return RankingItemCard(
                   novel: novel,
                   rank: index + 1,
-                  onTap: () => context.push('/narou/novel/${novel.id}'),
+                  onTap: () =>
+                      context.push(_detailLocation(novel.site, novel.id)),
                 );
               }
 
@@ -102,7 +102,9 @@ class RankingFeedList extends ConsumerWidget {
                         const SizedBox(height: 8),
                         TextButton(
                           onPressed: () => ref
-                              .read(rankingFeedControllerProvider(args).notifier)
+                              .read(
+                                rankingFeedControllerProvider(args).notifier,
+                              )
                               .loadNextPage(),
                           child: const Text('再試行'),
                         ),
@@ -146,5 +148,14 @@ class RankingFeedList extends ConsumerWidget {
       return 1;
     }
     return 0;
+  }
+
+  String _detailLocation(NovelSite site, String id) {
+    return switch (site) {
+      NovelSite.narou => '/narou/novel/$id',
+      NovelSite.narouR18 => '/narou-r18/novel/$id',
+      NovelSite.kakuyomu => '/kakuyomu/novel/$id',
+      NovelSite.aozora => '/aozora/novel/$id',
+    };
   }
 }

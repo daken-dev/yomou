@@ -89,6 +89,25 @@ class AppDrawer extends StatelessWidget {
                   onTap: () => _go(context, '/narou-r18/search'),
                   indent: true,
                 ),
+                const _SectionHeader(title: 'カクヨム'),
+                _DrawerItem(
+                  icon: Icons.trending_up_outlined,
+                  selectedIcon: Icons.trending_up,
+                  label: 'ランキング',
+                  location: '/kakuyomu/ranking',
+                  currentLocation: currentLocation,
+                  onTap: () => _go(context, '/kakuyomu/ranking'),
+                  indent: true,
+                ),
+                _DrawerItem(
+                  icon: Icons.search_outlined,
+                  selectedIcon: Icons.search,
+                  label: '検索',
+                  location: '/kakuyomu/search',
+                  currentLocation: currentLocation,
+                  onTap: () => _go(context, '/kakuyomu/search'),
+                  indent: true,
+                ),
                 const _SectionHeader(title: '青空文庫'),
                 _DrawerItem(
                   icon: Icons.menu_book_outlined,
@@ -173,7 +192,8 @@ class _DrawerItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isSelected = currentLocation == location ||
+    final isSelected =
+        currentLocation == location ||
         (location != '/' && currentLocation.startsWith(location));
     final theme = Theme.of(context);
 
@@ -195,9 +215,7 @@ class _DrawerItem extends StatelessWidget {
         selectedTileColor: theme.colorScheme.primaryContainer.withValues(
           alpha: 0.3,
         ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         onTap: onTap,
       ),
     );

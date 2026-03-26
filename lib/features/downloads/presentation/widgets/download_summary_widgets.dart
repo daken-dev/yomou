@@ -215,11 +215,8 @@ class SavedNovelTile extends ConsumerWidget {
 
     switch (action) {
       case _NovelMenuAction.openWorkPage:
-        final cardUrl =
-            novel.site == NovelSite.aozora && ref != null
-            ? (await ref
-                  .read(aozoraIndexStoreProvider)
-                  .findByWorkId(novel.id))
+        final cardUrl = novel.site == NovelSite.aozora && ref != null
+            ? (await ref.read(aozoraIndexStoreProvider).findByWorkId(novel.id))
                   ?.cardUrl
             : null;
         if (!context.mounted) {
@@ -260,6 +257,7 @@ class SavedNovelTile extends ConsumerWidget {
     return switch (novel.site) {
       NovelSite.narou => '/narou/novel/${novel.id}',
       NovelSite.narouR18 => '/narou-r18/novel/${novel.id}',
+      NovelSite.kakuyomu => '/kakuyomu/novel/${novel.id}',
       NovelSite.aozora => '/aozora/novel/${novel.id}',
     };
   }
