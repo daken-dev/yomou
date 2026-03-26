@@ -35,13 +35,10 @@ class AozoraIndexClient {
       orElse: () => throw const FormatException('CSVファイルが見つかりません。'),
     );
 
-    final csvText = _decodeText(csvFile.content as List<int>)
-        .replaceAll('\r\n', '\n')
-        .replaceAll('\r', '\n');
-    final rows = const CsvToListConverter(
-      shouldParseNumbers: false,
-      eol: '\n',
-    ).convert(csvText);
+    final csvText = _decodeText(
+      csvFile.content as List<int>,
+    ).replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+    final rows = Csv(autoDetect: false).decode(csvText);
 
     if (rows.length <= 1) {
       return const <AozoraWorkRecord>[];

@@ -35,6 +35,7 @@ class YomouApp extends ConsumerWidget {
           seedColor: const Color(0xFF5B7AA6),
           brightness: Brightness.light,
         ),
+        fontFamily: 'LineSeedJP',
         useMaterial3: true,
       ),
       darkTheme: ThemeData(
@@ -42,6 +43,7 @@ class YomouApp extends ConsumerWidget {
           seedColor: const Color(0xFF5B7AA6),
           brightness: Brightness.dark,
         ),
+        fontFamily: 'LineSeedJP',
         useMaterial3: true,
       ),
     );

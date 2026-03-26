@@ -56,7 +56,7 @@ class AppDatabase {
     if (opening != null) {
       await opening;
     }
-    _database?.dispose();
+    _database?.close();
     await _changesController.close();
   }
 
@@ -418,23 +418,39 @@ class AppDatabase {
 
   void _migrateToV7(sqlite.Database database) {
     _addColumnIfMissing(
-      database, 'app_settings', 'reader_padding_top', 'REAL NOT NULL DEFAULT 16',
+      database,
+      'app_settings',
+      'reader_padding_top',
+      'REAL NOT NULL DEFAULT 16',
     );
     _addColumnIfMissing(
-      database, 'app_settings', 'reader_padding_bottom', 'REAL NOT NULL DEFAULT 16',
+      database,
+      'app_settings',
+      'reader_padding_bottom',
+      'REAL NOT NULL DEFAULT 16',
     );
     _addColumnIfMissing(
-      database, 'app_settings', 'reader_padding_left', 'REAL NOT NULL DEFAULT 16',
+      database,
+      'app_settings',
+      'reader_padding_left',
+      'REAL NOT NULL DEFAULT 16',
     );
     _addColumnIfMissing(
-      database, 'app_settings', 'reader_padding_right', 'REAL NOT NULL DEFAULT 16',
+      database,
+      'app_settings',
+      'reader_padding_right',
+      'REAL NOT NULL DEFAULT 16',
     );
     _addColumnIfMissing(
-      database, 'app_settings', 'reader_single_page_position',
+      database,
+      'app_settings',
+      'reader_single_page_position',
       "TEXT NOT NULL DEFAULT 'center'",
     );
     _addColumnIfMissing(
-      database, 'app_settings', 'reader_avoid_notch',
+      database,
+      'app_settings',
+      'reader_avoid_notch',
       'INTEGER NOT NULL DEFAULT 0',
     );
   }

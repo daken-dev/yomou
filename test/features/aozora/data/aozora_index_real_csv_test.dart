@@ -18,10 +18,7 @@ void main() {
         .replaceAll('\r\n', '\n')
         .replaceAll('\r', '\n');
 
-    final rows = const CsvToListConverter(
-      shouldParseNumbers: false,
-      eol: '\n',
-    ).convert(csvText);
+    final rows = Csv(autoDetect: false).decode(csvText);
 
     // ignore: avoid_print
     print('Number of rows: ${rows.length}');
