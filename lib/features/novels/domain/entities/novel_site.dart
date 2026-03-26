@@ -1,10 +1,27 @@
-enum NovelSite { narou, aozora }
+enum NovelSite { narou, narouR18, aozora }
 
 extension NovelSiteX on NovelSite {
   String get displayName {
     return switch (this) {
       NovelSite.narou => 'なろう',
+      NovelSite.narouR18 => 'なろうR18',
       NovelSite.aozora => '青空文庫',
+    };
+  }
+
+  String get routePrefix {
+    return switch (this) {
+      NovelSite.narou => '/narou',
+      NovelSite.narouR18 => '/narou-r18',
+      NovelSite.aozora => '/aozora',
+    };
+  }
+
+  String? get workHost {
+    return switch (this) {
+      NovelSite.narou => 'ncode.syosetu.com',
+      NovelSite.narouR18 => 'novel18.syosetu.com',
+      NovelSite.aozora => null,
     };
   }
 }

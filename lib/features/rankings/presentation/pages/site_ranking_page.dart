@@ -38,6 +38,7 @@ class SiteRankingPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final title = isNewest ? '新着一覧' : period.displayName;
+    final routePrefix = site.routePrefix;
 
     return AppScaffold(
       title: title,
@@ -45,7 +46,7 @@ class SiteRankingPage extends StatelessWidget {
         IconButton(
           icon: const Icon(Icons.search_rounded),
           tooltip: '検索',
-          onPressed: () => context.push('/narou/search'),
+          onPressed: () => context.push('$routePrefix/search'),
         ),
       ],
       body: Column(
@@ -73,7 +74,7 @@ class SiteRankingPage extends StatelessWidget {
                         label: Text(tab.label),
                         selected: _isSelected(tab.periodValue),
                         onSelected: (_) => context.go(
-                          '/narou/ranking?period=${tab.periodValue}',
+                          '$routePrefix/ranking?period=${tab.periodValue}',
                         ),
                         showCheckmark: false,
                         labelStyle: TextStyle(

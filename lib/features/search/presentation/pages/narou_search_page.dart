@@ -8,7 +8,9 @@ import 'package:yomou/features/novels/domain/entities/novel_search_target.dart';
 import 'package:yomou/features/novels/domain/entities/novel_site.dart';
 
 class NarouSearchPage extends StatefulWidget {
-  const NarouSearchPage({super.key});
+  const NarouSearchPage({super.key, required this.site});
+
+  final NovelSite site;
 
   @override
   State<NarouSearchPage> createState() => _NarouSearchPageState();
@@ -183,7 +185,7 @@ class _NarouSearchPageState extends State<NarouSearchPage> {
     FocusManager.instance.primaryFocus?.unfocus();
 
     final request = NovelSearchRequest(
-      site: NovelSite.narou,
+      site: widget.site,
       query: _queryController.text,
       target: _target,
       genreCode: _genreCode,
@@ -202,7 +204,7 @@ class _NarouSearchPageState extends State<NarouSearchPage> {
     }
 
     final location = Uri(
-      path: '/narou/search/results',
+      path: '${widget.site.routePrefix}/search/results',
       queryParameters: request.toQueryParameters(),
     ).toString();
     context.push(location);

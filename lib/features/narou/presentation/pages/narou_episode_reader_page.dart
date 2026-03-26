@@ -19,6 +19,7 @@ import 'package:yomou/features/settings/domain/entities/app_settings.dart';
 class NarouEpisodeReaderPage extends ConsumerStatefulWidget {
   const NarouEpisodeReaderPage({
     super.key,
+    required this.site,
     required this.novelId,
     required this.episodeNo,
     this.episodeUrl,
@@ -26,6 +27,7 @@ class NarouEpisodeReaderPage extends ConsumerStatefulWidget {
     this.resumePageCount,
   });
 
+  final NovelSite site;
   final String novelId;
   final int episodeNo;
   final String? episodeUrl;
@@ -78,6 +80,7 @@ class _NarouEpisodeReaderPageState
   @override
   Widget build(BuildContext context) {
     final request = NarouEpisodeReaderRequest(
+      site: widget.site,
       novelId: widget.novelId,
       episodeNo: _currentEpisodeNo,
       episodeUrl: _currentEpisodeUrl,
@@ -601,7 +604,7 @@ class _NarouEpisodeReaderPageState
         ref
             .read(downloadStoreProvider)
             .saveReadingProgress(
-              site: NovelSite.narou,
+              site: widget.site,
               novelId: widget.novelId,
               episodeNo: episodeNo,
               pageNumber: pageNumber,

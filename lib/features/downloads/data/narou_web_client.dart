@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:html/dom.dart';
 import 'package:html/parser.dart' as html_parser;
+import 'package:yomou/features/novels/domain/entities/novel_site.dart';
 import 'package:yomou/core/network/dio_provider.dart';
 
 final narouWebClientProvider = Provider<NarouWebClient>((ref) {
@@ -11,32 +12,45 @@ final narouWebClientProvider = Provider<NarouWebClient>((ref) {
 });
 
 const String narouBaseUrl = 'https://ncode.syosetu.com';
+const String narouR18BaseUrl = 'https://novel18.syosetu.com';
+
+String narouBaseUrlForSite(NovelSite site) {
+  return switch (site) {
+    NovelSite.narou => narouBaseUrl,
+    NovelSite.narouR18 => narouR18BaseUrl,
+    NovelSite.aozora => throw UnsupportedError('Aozora does not use Narou web client'),
+  };
+}
 
 class NarouWebClient {
   NarouWebClient(this._dio);
 
   final Dio _dio;
 
-  Future<NarouInfoPage> fetchInfoPage(String novelId) async {
-    final url = buildInfoUrl(novelId);
+  Future<NarouInfoPage> fetchInfoPage(
+    String novelId, {
+    NovelSite site = NovelSite.narou,
+  }) async {
+    final url = buildInfoUrl(novelId, site: site);
     final document = await _fetchDocument(url);
     return NarouInfoPage.fromDocument(url: url, document: document);
   }
 
   Future<NarouTocPage> fetchTocPage(
     String novelId, {
+    NovelSite site = NovelSite.narou,
     int page = 1,
     String? inheritedChapterTitle,
     NarouInfoPage? shortStoryInfoPage,
   }) async {
-    final url = buildTocUrl(novelId, page: page);
+    final url = buildTocUrl(novelId, page: page, site: site);
     final document = await _fetchDocument(url);
     final resolvedInheritedChapterTitle =
         inheritedChapterTitle ??
         (page > 1 ? await _findInheritedChapter(url) : null);
     final resolvedShortStoryInfoPage =
         NarouTocPage.looksLikeSingleEpisodeDocument(document)
-        ? (shortStoryInfoPage ?? await fetchInfoPage(novelId))
+        ? (shortStoryInfoPage ?? await fetchInfoPage(novelId, site: site))
         : null;
     return NarouTocPage.fromDocument(
       url: url,
@@ -49,42 +63,51 @@ class NarouWebClient {
   Future<NarouEpisodePage> fetchEpisodePage(
     String novelId,
     int episodeNo, {
+    NovelSite site = NovelSite.narou,
     String? url,
   }) async {
-    final resolvedUrl = url ?? buildEpisodeUrl(novelId, episodeNo);
+    final resolvedUrl = url ?? buildEpisodeUrl(novelId, episodeNo, site: site);
     final document = await _fetchDocument(resolvedUrl);
     return NarouEpisodePage.fromDocument(url: resolvedUrl, document: document);
   }
 
-  String buildInfoUrl(String novelId) {
-    return '$narouBaseUrl/novelview/infotop/ncode/${novelId.toLowerCase()}/';
+  String buildInfoUrl(
+    String novelId, {
+    NovelSite site = NovelSite.narou,
+  }) {
+    final baseUrl = narouBaseUrlForSite(site);
+    return '$baseUrl/novelview/infotop/ncode/${novelId.toLowerCase()}/';
   }
 
-  String buildTocUrl(String novelId, {int page = 1}) {
-    final base = '$narouBaseUrl/${novelId.toLowerCase()}/';
+  String buildTocUrl(
+    String novelId, {
+    NovelSite site = NovelSite.narou,
+    int page = 1,
+  }) {
+    final baseUrl = narouBaseUrlForSite(site);
+    final base = '$baseUrl/${novelId.toLowerCase()}/';
     if (page <= 1) {
       return base;
     }
     return '$base?p=$page';
   }
 
-  String buildEpisodeUrl(String novelId, int episodeNo) {
-    return '$narouBaseUrl/${novelId.toLowerCase()}/$episodeNo/';
+  String buildEpisodeUrl(
+    String novelId,
+    int episodeNo, {
+    NovelSite site = NovelSite.narou,
+  }) {
+    final baseUrl = narouBaseUrlForSite(site);
+    return '$baseUrl/${novelId.toLowerCase()}/$episodeNo/';
   }
 
   Future<Document> _fetchDocument(String url) async {
+    final uri = Uri.parse(url);
     final response = await _dio.get<String>(
       url,
       options: Options(
         responseType: ResponseType.plain,
-        headers: <String, Object>{
-          'User-Agent':
-              'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 '
-              '(KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
-          'Accept':
-              'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'Accept-Language': 'ja,en-US;q=0.9,en;q=0.8',
-        },
+        headers: _headersFor(uri),
       ),
     );
 
@@ -94,6 +117,25 @@ class NarouWebClient {
     }
 
     return html_parser.parse(html);
+  }
+
+  Map<String, Object> _headersFor(Uri uri) {
+    final headers = <String, Object>{
+      'User-Agent':
+          'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 '
+          '(KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
+      'Accept':
+          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'ja,en-US;q=0.9,en;q=0.8',
+    };
+
+    // novel18ドメインは年齢確認Cookieがないと403になることがある。
+    if (uri.host == 'novel18.syosetu.com') {
+      headers['Referer'] = 'https://novel18.syosetu.com/';
+      headers['Cookie'] = 'over18=yes';
+    }
+
+    return headers;
   }
 
   Future<String?> _findInheritedChapter(String url) async {

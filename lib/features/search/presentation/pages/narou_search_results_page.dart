@@ -5,6 +5,7 @@ import 'package:yomou/features/navigation/presentation/widgets/app_scaffold.dart
 import 'package:yomou/features/novels/domain/entities/novel_search_order.dart';
 import 'package:yomou/features/novels/domain/entities/novel_search_request.dart';
 import 'package:yomou/features/novels/domain/entities/novel_search_target.dart';
+import 'package:yomou/features/novels/domain/entities/novel_site.dart';
 import 'package:yomou/features/search/presentation/widgets/search_result_list.dart';
 
 class NarouSearchResultsPage extends StatelessWidget {
@@ -23,7 +24,7 @@ class NarouSearchResultsPage extends StatelessWidget {
         IconButton(
           icon: const Icon(Icons.search_rounded),
           tooltip: '検索',
-          onPressed: () => context.push('/narou/search'),
+          onPressed: () => context.push('${request.site.routePrefix}/search'),
         ),
       ],
       body: Column(
@@ -124,7 +125,7 @@ class NarouSearchResultsPage extends StatelessWidget {
   String _locationFor(NovelSearchOrder order) {
     final nextRequest = request.copyWith(order: order, page: 1);
     return Uri(
-      path: '/narou/search/results',
+      path: '${request.site.routePrefix}/search/results',
       queryParameters: nextRequest.toQueryParameters(),
     ).toString();
   }

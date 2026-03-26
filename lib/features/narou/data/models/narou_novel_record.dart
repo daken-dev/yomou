@@ -7,6 +7,7 @@ class NarouNovelRecord {
     required this.title,
     required this.ncode,
     required this.writer,
+    required this.site,
     this.story = '',
     this.genre = 0,
     this.keyword = '',
@@ -19,7 +20,10 @@ class NarouNovelRecord {
     this.novelType = 1,
   });
 
-  factory NarouNovelRecord.fromJson(Map<String, dynamic> json) {
+  factory NarouNovelRecord.fromJson(
+    Map<String, dynamic> json, {
+    required NovelSite site,
+  }) {
     final title = json['title'];
     final ncode = json['ncode'];
     final writer = json['writer'];
@@ -32,6 +36,7 @@ class NarouNovelRecord {
       title: title,
       ncode: ncode,
       writer: writer,
+      site: site,
       story: (json['story'] as String?) ?? '',
       genre: (json['genre'] as num?)?.toInt() ?? 0,
       keyword: (json['keyword'] as String?) ?? '',
@@ -48,6 +53,7 @@ class NarouNovelRecord {
   final String title;
   final String ncode;
   final String writer;
+  final NovelSite site;
   final String story;
   final int genre;
   final String keyword;
@@ -61,7 +67,7 @@ class NarouNovelRecord {
 
   NovelSummary toNovelSummary() {
     return NovelSummary(
-      site: NovelSite.narou,
+      site: site,
       id: ncode,
       title: title,
       author: writer,

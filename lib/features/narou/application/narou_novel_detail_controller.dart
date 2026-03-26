@@ -1,26 +1,32 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:yomou/features/downloads/data/narou_web_client.dart';
+import 'package:yomou/features/novels/domain/entities/novel_site.dart';
 
 final narouNovelDetailControllerProvider =
     AsyncNotifierProvider.family<
       NarouNovelDetailController,
       NarouNovelDetailState,
-      String
+      ({NovelSite site, String novelId})
     >(NarouNovelDetailController.new);
 
 class NarouNovelDetailController extends AsyncNotifier<NarouNovelDetailState> {
-  NarouNovelDetailController(this.novelId);
+  NarouNovelDetailController(this._args);
 
-  final String novelId;
+  final ({NovelSite site, String novelId}) _args;
+
+  late final NovelSite _site;
+  late final String _novelId;
 
   @override
   Future<NarouNovelDetailState> build() async {
-    final infoFuture = _client.fetchInfoPage(novelId);
-    final tocPage = await _client.fetchTocPage(novelId);
+    _site = _args.site;
+    _novelId = _args.novelId;
+    final infoFuture = _client.fetchInfoPage(_novelId, site: _site);
+    final tocPage = await _client.fetchTocPage(_novelId, site: _site);
     final infoPage = await infoFuture;
 
     return NarouNovelDetailState(
-      title: infoPage.title ?? tocPage.title ?? novelId,
+      title: infoPage.title ?? tocPage.title ?? _novelId,
       authorName: infoPage.authorName ?? tocPage.authorName ?? '',
       summary: tocPage.summary ?? '',
       infoFields: infoPage.fields,
@@ -45,7 +51,8 @@ class NarouNovelDetailController extends AsyncNotifier<NarouNovelDetailState> {
 
     try {
       final tocPage = await _client.fetchTocPage(
-        novelId,
+        _novelId,
+        site: _site,
         page: currentState.currentPage + 1,
         inheritedChapterTitle: currentState.lastChapterTitle,
       );

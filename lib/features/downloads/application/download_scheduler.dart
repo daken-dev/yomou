@@ -165,9 +165,14 @@ class DownloadScheduler {
 
     switch (job.site) {
       case NovelSite.narou:
-        final infoPage = await _client.fetchInfoPage(job.novelId);
+      case NovelSite.narouR18:
+        final infoPage = await _client.fetchInfoPage(
+          job.novelId,
+          site: job.site,
+        );
         final firstTocPage = await _client.fetchTocPage(
           job.novelId,
+          site: job.site,
           shortStoryInfoPage: infoPage,
         );
         final tocPages = <NarouTocPage>[firstTocPage];
@@ -175,6 +180,7 @@ class DownloadScheduler {
         for (var page = 2; page <= firstTocPage.lastPage; page += 1) {
           final tocPage = await _client.fetchTocPage(
             job.novelId,
+            site: job.site,
             page: page,
             inheritedChapterTitle: lastChapterTitle,
           );
@@ -242,6 +248,7 @@ class DownloadScheduler {
 
     switch (job.site) {
       case NovelSite.narou:
+      case NovelSite.narouR18:
         final episodeUrl = await _store.episodeUrlFor(
           job.site,
           job.novelId,
@@ -253,6 +260,7 @@ class DownloadScheduler {
         final page = await _client.fetchEpisodePage(
           job.novelId,
           episodeNo,
+          site: job.site,
           url: episodeUrl,
         );
         await _store.markEpisodeDownloaded(

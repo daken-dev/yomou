@@ -1494,6 +1494,8 @@ class DownloadStore {
     return switch (site) {
       NovelSite.narou =>
         'https://ncode.syosetu.com/novelview/infotop/ncode/${novelId.toLowerCase()}/',
+      NovelSite.narouR18 =>
+        'https://novel18.syosetu.com/novelview/infotop/ncode/${novelId.toLowerCase()}/',
       NovelSite.aozora => null,
     };
   }
@@ -1501,6 +1503,8 @@ class DownloadStore {
   String? _tocUrlForId(NovelSite site, String novelId) {
     return switch (site) {
       NovelSite.narou => 'https://ncode.syosetu.com/${novelId.toLowerCase()}/',
+      NovelSite.narouR18 =>
+        'https://novel18.syosetu.com/${novelId.toLowerCase()}/',
       NovelSite.aozora => null,
     };
   }

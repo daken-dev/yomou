@@ -290,12 +290,13 @@ class _HomeSavedNovelTile extends ConsumerWidget {
       }
 
       return Uri(
-        path: '/narou/novel/${novel.id}/episode/${novel.resumeEpisodeNo}',
+        path:
+            '${novel.site.routePrefix}/novel/${novel.id}/episode/${novel.resumeEpisodeNo}',
         queryParameters: queryParameters.isEmpty ? null : queryParameters,
       ).toString();
     }
 
-    return '/narou/novel/${novel.id}';
+    return '${novel.site.routePrefix}/novel/${novel.id}';
   }
 }
 

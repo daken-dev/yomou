@@ -36,13 +36,51 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
+        path: '/narou-r18/ranking',
+        builder: (context, state) {
+          final periodParam = state.uri.queryParameters['period'];
+          final isNewest = periodParam == 'new';
+          return SiteRankingPage(
+            site: NovelSite.narouR18,
+            period: NovelRankingPeriodX.fromQueryValue(periodParam),
+            isNewest: isNewest,
+          );
+        },
+      ),
+      GoRoute(
         path: '/narou/novel/:id',
         builder: (context, state) =>
-            NarouNovelDetailPage(novelId: state.pathParameters['id'] ?? ''),
+            NarouNovelDetailPage(
+              site: NovelSite.narou,
+              novelId: state.pathParameters['id'] ?? '',
+            ),
+      ),
+      GoRoute(
+        path: '/narou-r18/novel/:id',
+        builder: (context, state) => NarouNovelDetailPage(
+          site: NovelSite.narouR18,
+          novelId: state.pathParameters['id'] ?? '',
+        ),
       ),
       GoRoute(
         path: '/narou/novel/:id/episode/:episodeNo',
         builder: (context, state) => NarouEpisodeReaderPage(
+          site: NovelSite.narou,
+          novelId: state.pathParameters['id'] ?? '',
+          episodeNo: int.tryParse(state.pathParameters['episodeNo'] ?? '') ?? 1,
+          episodeUrl: state.uri.queryParameters['url'],
+          resumePage: int.tryParse(
+            state.uri.queryParameters['resumePage'] ?? '',
+          ),
+          resumePageCount: int.tryParse(
+            state.uri.queryParameters['resumePageCount'] ?? '',
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/narou-r18/novel/:id/episode/:episodeNo',
+        builder: (context, state) => NarouEpisodeReaderPage(
+          site: NovelSite.narouR18,
           novelId: state.pathParameters['id'] ?? '',
           episodeNo: int.tryParse(state.pathParameters['episodeNo'] ?? '') ?? 1,
           episodeUrl: state.uri.queryParameters['url'],
@@ -56,13 +94,35 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/narou/search',
-        builder: (context, state) => const NarouSearchPage(),
+        builder: (context, state) =>
+            const NarouSearchPage(site: NovelSite.narou),
+      ),
+      GoRoute(
+        path: '/narou-r18/search',
+        builder: (context, state) =>
+            const NarouSearchPage(site: NovelSite.narouR18),
       ),
       GoRoute(
         path: '/narou/search/results',
         builder: (context, state) => NarouSearchResultsPage(
           request: NovelSearchRequest(
             site: NovelSite.narou,
+            query: state.uri.queryParameters['q'] ?? '',
+            target: NovelSearchTargetX.fromQueryValue(
+              state.uri.queryParameters['target'],
+            ),
+            genreCode: int.tryParse(state.uri.queryParameters['genre'] ?? ''),
+            order: NovelSearchOrderX.fromQueryValue(
+              state.uri.queryParameters['order'],
+            ),
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/narou-r18/search/results',
+        builder: (context, state) => NarouSearchResultsPage(
+          request: NovelSearchRequest(
+            site: NovelSite.narouR18,
             query: state.uri.queryParameters['q'] ?? '',
             target: NovelSearchTargetX.fromQueryValue(
               state.uri.queryParameters['target'],

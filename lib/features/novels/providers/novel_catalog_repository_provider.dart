@@ -9,6 +9,7 @@ final novelCatalogRepositoryProvider =
     Provider.family<NovelCatalogRepository, NovelSite>((ref, site) {
       return switch (site) {
         NovelSite.narou => ref.watch(narouNovelCatalogRepositoryProvider),
+        NovelSite.narouR18 => ref.watch(narouR18NovelCatalogRepositoryProvider),
         NovelSite.aozora => AozoraNovelCatalogRepository(
           ref.watch(aozoraIndexStoreProvider),
         ),

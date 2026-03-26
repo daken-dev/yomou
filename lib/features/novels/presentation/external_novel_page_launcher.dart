@@ -29,11 +29,16 @@ Future<void> openExternalUrlInBrowser(
 Uri? buildWorkPageUri(NovelSite site, String novelId, {String? aozoraCardUrl}) {
   switch (site) {
     case NovelSite.narou:
+    case NovelSite.narouR18:
       final normalized = novelId.trim().toLowerCase();
       if (normalized.isEmpty) {
         return null;
       }
-      return Uri.https('ncode.syosetu.com', '/$normalized/');
+      final host = site.workHost;
+      if (host == null) {
+        return null;
+      }
+      return Uri.https(host, '/$normalized/');
     case NovelSite.aozora:
       final url = aozoraCardUrl?.trim();
       if (url == null || url.isEmpty) {

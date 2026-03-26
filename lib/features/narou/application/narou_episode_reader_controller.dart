@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:yomou/features/downloads/data/narou_web_client.dart';
+import 'package:yomou/features/novels/domain/entities/novel_site.dart';
 
 final narouEpisodeReaderProvider = FutureProvider.autoDispose
     .family<NarouEpisodeReaderData, NarouEpisodeReaderRequest>((
@@ -11,6 +12,7 @@ final narouEpisodeReaderProvider = FutureProvider.autoDispose
           .fetchEpisodePage(
             request.novelId,
             request.episodeNo,
+            site: request.site,
             url: request.episodeUrl,
           );
 
@@ -25,11 +27,13 @@ final narouEpisodeReaderProvider = FutureProvider.autoDispose
 
 class NarouEpisodeReaderRequest {
   const NarouEpisodeReaderRequest({
+    required this.site,
     required this.novelId,
     required this.episodeNo,
     this.episodeUrl,
   });
 
+  final NovelSite site;
   final String novelId;
   final int episodeNo;
   final String? episodeUrl;
@@ -37,13 +41,14 @@ class NarouEpisodeReaderRequest {
   @override
   bool operator ==(Object other) {
     return other is NarouEpisodeReaderRequest &&
+        other.site == site &&
         other.novelId == novelId &&
         other.episodeNo == episodeNo &&
         other.episodeUrl == episodeUrl;
   }
 
   @override
-  int get hashCode => Object.hash(novelId, episodeNo, episodeUrl);
+  int get hashCode => Object.hash(site, novelId, episodeNo, episodeUrl);
 }
 
 class NarouEpisodeReaderData {

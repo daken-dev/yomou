@@ -5,18 +5,27 @@ import 'package:yomou/features/narou/data/models/narou_novel_record.dart';
 import 'package:yomou/features/novels/domain/entities/novel_ranking_period.dart';
 import 'package:yomou/features/novels/domain/entities/novel_search_order.dart';
 import 'package:yomou/features/novels/domain/entities/novel_search_target.dart';
+import 'package:yomou/features/novels/domain/entities/novel_site.dart';
 import 'package:yomou/features/novels/domain/entities/paged_result.dart';
 
-final narouApiClientProvider = Provider<NarouApiClient>((ref) {
-  return NarouApiClient(ref.watch(dioProvider));
+final narouApiClientProvider = Provider.family<NarouApiClient, NovelSite>((
+  ref,
+  site,
+) {
+  return NarouApiClient(ref.watch(dioProvider), site: site);
 });
 
 class NarouApiClient {
-  NarouApiClient(this._dio);
-
-  static const String _endpoint = 'https://api.syosetu.com/novelapi/api/';
+  NarouApiClient(this._dio, {required this.site});
 
   final Dio _dio;
+  final NovelSite site;
+
+  String get _endpoint => switch (site) {
+    NovelSite.narou => 'https://api.syosetu.com/novelapi/api/',
+    NovelSite.narouR18 => 'https://api.syosetu.com/novel18api/api/',
+    NovelSite.aozora => throw UnsupportedError('Aozora does not use Narou API'),
+  };
 
   Future<PagedResult<NarouNovelRecord>> fetchRankingPage({
     required NovelRankingPeriod period,
@@ -118,7 +127,10 @@ class NarouApiClient {
             throw const FormatException('Narou API item was malformed.');
           }
 
-          return NarouNovelRecord.fromJson(Map<String, dynamic>.from(item));
+          return NarouNovelRecord.fromJson(
+            Map<String, dynamic>.from(item),
+            site: site,
+          );
         })
         .toList(growable: false);
 

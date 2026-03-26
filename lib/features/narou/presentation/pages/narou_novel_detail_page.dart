@@ -14,20 +14,26 @@ import 'package:yomou/features/novels/presentation/external_novel_page_launcher.
 enum _DetailMenuAction { openWorkPage, refresh, remove }
 
 class NarouNovelDetailPage extends ConsumerWidget {
-  const NarouNovelDetailPage({super.key, required this.novelId});
+  const NarouNovelDetailPage({
+    super.key,
+    required this.site,
+    required this.novelId,
+  });
 
+  final NovelSite site;
   final String novelId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final detail = ref.watch(narouNovelDetailControllerProvider(novelId));
+    final providerArgs = (site: site, novelId: novelId);
+    final detail = ref.watch(narouNovelDetailControllerProvider(providerArgs));
     final detailState = switch (detail) {
       AsyncData(:final value) => value,
       _ => null,
     };
     final savedNovel = ref
         .watch(
-          savedNovelOverviewProvider((site: NovelSite.narou, novelId: novelId)),
+          savedNovelOverviewProvider((site: site, novelId: novelId)),
         )
         .value;
 
@@ -53,10 +59,12 @@ class NarouNovelDetailPage extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stackTrace) => _ErrorView(
           error: error,
-          onRetry: () =>
-              ref.invalidate(narouNovelDetailControllerProvider(novelId)),
+          onRetry: () => ref.invalidate(
+            narouNovelDetailControllerProvider(providerArgs),
+          ),
         ),
-        data: (state) => _DetailContent(novelId: novelId, state: state),
+        data: (state) =>
+            _DetailContent(site: site, novelId: novelId, state: state),
       ),
     );
   }
@@ -120,7 +128,7 @@ class NarouNovelDetailPage extends ConsumerWidget {
     switch (action) {
       case _DetailMenuAction.openWorkPage:
         unawaited(
-          openWorkPageInExternalBrowser(context, NovelSite.narou, novelId),
+          openWorkPageInExternalBrowser(context, site, novelId),
         );
         break;
       case _DetailMenuAction.refresh:
@@ -144,7 +152,7 @@ class NarouNovelDetailPage extends ConsumerWidget {
 
   NovelSummary _novelSummary(NarouNovelDetailState state) {
     return NovelSummary(
-      site: NovelSite.narou,
+      site: site,
       id: novelId,
       title: state.title,
       author: state.authorName,
@@ -167,7 +175,7 @@ class NarouNovelDetailPage extends ConsumerWidget {
     }
 
     final uri = Uri(
-      path: '/narou/novel/$novelId/episode/${novel.resumeEpisodeNo}',
+      path: '${site.routePrefix}/novel/$novelId/episode/${novel.resumeEpisodeNo}',
       queryParameters: queryParameters.isEmpty ? null : queryParameters,
     );
     return uri.toString();
@@ -228,8 +236,13 @@ class _ErrorView extends StatelessWidget {
 }
 
 class _DetailContent extends ConsumerWidget {
-  const _DetailContent({required this.novelId, required this.state});
+  const _DetailContent({
+    required this.site,
+    required this.novelId,
+    required this.state,
+  });
 
+  final NovelSite site;
   final String novelId;
   final NarouNovelDetailState state;
 
@@ -239,7 +252,11 @@ class _DetailContent extends ConsumerWidget {
       onNotification: (notification) {
         if (notification.metrics.extentAfter < 400) {
           ref
-              .read(narouNovelDetailControllerProvider(novelId).notifier)
+              .read(
+                narouNovelDetailControllerProvider(
+                  (site: site, novelId: novelId),
+                ).notifier,
+              )
               .loadNextPage();
         }
         return false;
@@ -267,8 +284,7 @@ class _DetailContent extends ConsumerWidget {
                         ? null
                         : () {
                             final location = Uri(
-                              path:
-                                  '/narou/novel/$novelId/episode/${item.episodeNo}',
+                              path: '${site.routePrefix}/novel/$novelId/episode/${item.episodeNo}',
                               queryParameters: item.episodeUrl == null
                                   ? null
                                   : <String, String>{'url': item.episodeUrl!},
@@ -284,7 +300,9 @@ class _DetailContent extends ConsumerWidget {
                     message: message,
                     onRetry: () => ref
                         .read(
-                          narouNovelDetailControllerProvider(novelId).notifier,
+                          narouNovelDetailControllerProvider(
+                            (site: site, novelId: novelId),
+                          ).notifier,
                         )
                         .loadNextPage(),
                   );
@@ -294,7 +312,9 @@ class _DetailContent extends ConsumerWidget {
                   Future.microtask(
                     () => ref
                         .read(
-                          narouNovelDetailControllerProvider(novelId).notifier,
+                          narouNovelDetailControllerProvider(
+                            (site: site, novelId: novelId),
+                          ).notifier,
                         )
                         .loadNextPage(),
                   );

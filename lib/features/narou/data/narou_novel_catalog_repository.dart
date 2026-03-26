@@ -11,12 +11,25 @@ import 'package:yomou/features/novels/domain/repositories/novel_catalog_reposito
 final narouNovelCatalogRepositoryProvider = Provider<NovelCatalogRepository>((
   ref,
 ) {
-  return NarouNovelCatalogRepository(ref.watch(narouApiClientProvider));
+  return NarouNovelCatalogRepository(
+    ref.watch(narouApiClientProvider(NovelSite.narou)),
+    site: NovelSite.narou,
+  );
+});
+
+final narouR18NovelCatalogRepositoryProvider = Provider<NovelCatalogRepository>((
+  ref,
+) {
+  return NarouNovelCatalogRepository(
+    ref.watch(narouApiClientProvider(NovelSite.narouR18)),
+    site: NovelSite.narouR18,
+  );
 });
 
 class NarouNovelCatalogRepository implements NovelCatalogRepository {
   NarouNovelCatalogRepository(
     this._apiClient, {
+    required this.site,
     Duration cacheDuration = const Duration(minutes: 10),
     DateTime Function()? now,
   }) : _rankingCache =
@@ -30,12 +43,11 @@ class NarouNovelCatalogRepository implements NovelCatalogRepository {
        );
 
   final NarouApiClient _apiClient;
+  @override
+  final NovelSite site;
   final TimedCache<NovelRankingPageRequest, PagedResult<NovelSummary>>
   _rankingCache;
   final TimedCache<NovelSearchRequest, PagedResult<NovelSummary>> _searchCache;
-
-  @override
-  NovelSite get site => NovelSite.narou;
 
   @override
   Future<PagedResult<NovelSummary>> fetchRankingPage(

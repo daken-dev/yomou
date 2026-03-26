@@ -259,6 +259,7 @@ class SavedNovelTile extends ConsumerWidget {
   String _detailLocation() {
     return switch (novel.site) {
       NovelSite.narou => '/narou/novel/${novel.id}',
+      NovelSite.narouR18 => '/narou-r18/novel/${novel.id}',
       NovelSite.aozora => '/aozora/novel/${novel.id}',
     };
   }
@@ -290,7 +291,8 @@ class SavedNovelTile extends ConsumerWidget {
     }
 
     return Uri(
-      path: '/narou/novel/${novel.id}/episode/${novel.resumeEpisodeNo}',
+      path:
+          '${novel.site.routePrefix}/novel/${novel.id}/episode/${novel.resumeEpisodeNo}',
       queryParameters: queryParameters.isEmpty ? null : queryParameters,
     ).toString();
   }

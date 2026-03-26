@@ -243,6 +243,7 @@ class SearchResultList extends ConsumerWidget {
   String _detailLocation(NovelSite site, String id) {
     return switch (site) {
       NovelSite.narou => '/narou/novel/$id',
+      NovelSite.narouR18 => '/narou-r18/novel/$id',
       NovelSite.aozora => '/aozora/novel/$id',
     };
   }
