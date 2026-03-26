@@ -60,6 +60,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
+        path: '/hameln/ranking',
+        builder: (context, state) {
+          final periodParam = state.uri.queryParameters['period'];
+          final isNewest = periodParam == 'new';
+          return SiteRankingPage(
+            site: NovelSite.hameln,
+            period: NovelRankingPeriodX.fromQueryValue(periodParam),
+            isNewest: isNewest,
+          );
+        },
+      ),
+      GoRoute(
         path: '/narou/novel/:id',
         builder: (context, state) => NarouNovelDetailPage(
           site: NovelSite.narou,
@@ -119,6 +131,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             const NarouSearchPage(site: NovelSite.kakuyomu),
       ),
       GoRoute(
+        path: '/hameln/search',
+        builder: (context, state) =>
+            const NarouSearchPage(site: NovelSite.hameln),
+      ),
+      GoRoute(
         path: '/narou/search/results',
         builder: (context, state) => NarouSearchResultsPage(
           request: NovelSearchRequest(
@@ -163,6 +180,24 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             order: NovelSearchOrderX.fromQueryValue(
               state.uri.queryParameters['order'],
             ),
+            original: state.uri.queryParameters['original'],
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/hameln/search/results',
+        builder: (context, state) => NarouSearchResultsPage(
+          request: NovelSearchRequest(
+            site: NovelSite.hameln,
+            query: state.uri.queryParameters['q'] ?? '',
+            target: NovelSearchTargetX.fromQueryValue(
+              state.uri.queryParameters['target'],
+            ),
+            genreCode: int.tryParse(state.uri.queryParameters['genre'] ?? ''),
+            order: NovelSearchOrderX.fromQueryValue(
+              state.uri.queryParameters['order'],
+            ),
+            original: state.uri.queryParameters['original'],
           ),
         ),
       ),
@@ -174,9 +209,31 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
+        path: '/hameln/novel/:id',
+        builder: (context, state) => NarouNovelDetailPage(
+          site: NovelSite.hameln,
+          novelId: state.pathParameters['id'] ?? '',
+        ),
+      ),
+      GoRoute(
         path: '/kakuyomu/novel/:id/episode/:episodeNo',
         builder: (context, state) => NarouEpisodeReaderPage(
           site: NovelSite.kakuyomu,
+          novelId: state.pathParameters['id'] ?? '',
+          episodeNo: int.tryParse(state.pathParameters['episodeNo'] ?? '') ?? 1,
+          episodeUrl: state.uri.queryParameters['url'],
+          resumePage: int.tryParse(
+            state.uri.queryParameters['resumePage'] ?? '',
+          ),
+          resumePageCount: int.tryParse(
+            state.uri.queryParameters['resumePageCount'] ?? '',
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/hameln/novel/:id/episode/:episodeNo',
+        builder: (context, state) => NarouEpisodeReaderPage(
+          site: NovelSite.hameln,
           novelId: state.pathParameters['id'] ?? '',
           episodeNo: int.tryParse(state.pathParameters['episodeNo'] ?? '') ?? 1,
           episodeUrl: state.uri.queryParameters['url'],

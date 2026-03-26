@@ -4,6 +4,7 @@ import 'package:yomou/features/aozora/data/aozora_index_store.dart';
 import 'package:yomou/features/aozora/data/aozora_text_client.dart';
 import 'package:yomou/features/downloads/data/download_store.dart';
 import 'package:yomou/features/downloads/data/narou_web_client.dart';
+import 'package:yomou/features/hameln/data/hameln_web_client.dart';
 import 'package:yomou/features/kakuyomu/data/kakuyomu_web_client.dart';
 import 'package:yomou/features/downloads/domain/entities/download_job_overview.dart';
 import 'package:yomou/features/novels/domain/entities/novel_site.dart';
@@ -14,6 +15,7 @@ class DownloadScheduler {
     this._store,
     this._client,
     this._kakuyomuClient,
+    this._hamelnClient,
     this._aozoraIndexStore,
     this._aozoraTextClient, {
     DateTime Function()? now,
@@ -29,6 +31,7 @@ class DownloadScheduler {
   final DownloadStore _store;
   final NarouWebClient _client;
   final KakuyomuWebClient _kakuyomuClient;
+  final HamelnWebClient _hamelnClient;
   final AozoraIndexStore _aozoraIndexStore;
   final AozoraTextClient _aozoraTextClient;
   final DateTime Function() _now;
@@ -242,6 +245,33 @@ class DownloadScheduler {
           job.novelId,
           result.downloadPlans,
         );
+      case NovelSite.hameln:
+        final infoPage = await _hamelnClient.fetchInfoPage(job.novelId);
+        final tocPage = await _hamelnClient.fetchTocPage(job.novelId);
+
+        if (!await _store.hasSavedNovel(job.site, job.novelId)) {
+          return;
+        }
+
+        final result = await _store.applyNovelSync(
+          site: job.site,
+          novelId: job.novelId,
+          fallbackTitle: tocPage.title ?? infoPage.title ?? job.novelId,
+          infoPage: infoPage,
+          tocPages: <NarouTocPage>[tocPage],
+          force: job.force,
+          refreshInterval: refreshInterval,
+        );
+
+        if (result.isLocked) {
+          throw UpdateLockedException(result.lockReason ?? '更新ロック');
+        }
+
+        await _store.enqueueEpisodeDownloads(
+          job.site,
+          job.novelId,
+          result.downloadPlans,
+        );
       case NovelSite.aozora:
         final work = await _aozoraIndexStore.findByWorkId(job.novelId);
         if (work == null) {
@@ -310,6 +340,27 @@ class DownloadScheduler {
           return;
         }
         final page = await _kakuyomuClient.fetchEpisodePage(
+          job.novelId,
+          episodeNo,
+          url: episodeUrl,
+        );
+        await _store.markEpisodeDownloaded(
+          site: job.site,
+          novelId: job.novelId,
+          episodeNo: episodeNo,
+          page: page,
+          excludingJobId: job.id,
+        );
+      case NovelSite.hameln:
+        final episodeUrl = await _store.episodeUrlFor(
+          job.site,
+          job.novelId,
+          episodeNo,
+        );
+        if (!await _store.hasSavedNovel(job.site, job.novelId)) {
+          return;
+        }
+        final page = await _hamelnClient.fetchEpisodePage(
           job.novelId,
           episodeNo,
           url: episodeUrl,

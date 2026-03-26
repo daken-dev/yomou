@@ -27,6 +27,7 @@ class NarouApiClient {
     NovelSite.kakuyomu => throw UnsupportedError(
       'Kakuyomu does not use Narou API',
     ),
+    NovelSite.hameln => throw UnsupportedError('Hameln does not use Narou API'),
     NovelSite.aozora => throw UnsupportedError('Aozora does not use Narou API'),
   };
 

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:yomou/features/hameln/data/hameln_web_client.dart';
 import 'package:yomou/features/kakuyomu/domain/entities/kakuyomu_genre.dart';
 import 'package:yomou/features/narou/domain/entities/narou_genre.dart';
 import 'package:yomou/features/navigation/presentation/widgets/app_scaffold.dart';
@@ -8,19 +10,20 @@ import 'package:yomou/features/novels/domain/entities/novel_search_request.dart'
 import 'package:yomou/features/novels/domain/entities/novel_search_target.dart';
 import 'package:yomou/features/novels/domain/entities/novel_site.dart';
 
-class NarouSearchPage extends StatefulWidget {
+class NarouSearchPage extends ConsumerStatefulWidget {
   const NarouSearchPage({super.key, required this.site});
 
   final NovelSite site;
 
   @override
-  State<NarouSearchPage> createState() => _NarouSearchPageState();
+  ConsumerState<NarouSearchPage> createState() => _NarouSearchPageState();
 }
 
-class _NarouSearchPageState extends State<NarouSearchPage> {
+class _NarouSearchPageState extends ConsumerState<NarouSearchPage> {
   late final TextEditingController _queryController;
   NovelSearchTarget _target = NovelSearchTarget.all;
   int? _genreCode;
+  String? _original;
 
   @override
   void initState() {
@@ -38,9 +41,14 @@ class _NarouSearchPageState extends State<NarouSearchPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final supportsTarget = widget.site != NovelSite.kakuyomu;
-    final supportsGenre = true;
+    final supportsTarget =
+        widget.site != NovelSite.kakuyomu && widget.site != NovelSite.hameln;
+    final supportsGenre = widget.site != NovelSite.hameln;
+    final supportsOriginal = widget.site == NovelSite.hameln;
     final genreItems = _genreOptions(widget.site);
+    final originalOptions = supportsOriginal
+        ? ref.watch(hamelnOriginalOptionsProvider)
+        : const AsyncData<List<HamelnOriginalOption>>(<HamelnOriginalOption>[]);
 
     return AppScaffold(
       title: '検索',
@@ -84,6 +92,8 @@ class _NarouSearchPageState extends State<NarouSearchPage> {
                 ),
                 hintText: widget.site == NovelSite.kakuyomu
                     ? '作品名やキーワード'
+                    : widget.site == NovelSite.hameln
+                    ? '作品名や本文キーワード'
                     : '作品名、あらすじ、キーワードなど',
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -140,6 +150,42 @@ class _NarouSearchPageState extends State<NarouSearchPage> {
               const SizedBox(height: 32),
             ],
 
+            if (supportsOriginal) ...[
+              _SectionLabel(label: '原作', colorScheme: colorScheme),
+              const SizedBox(height: 8),
+              originalOptions.when(
+                data: (items) {
+                  return DropdownButtonFormField<String?>(
+                    initialValue: _original,
+                    decoration: _inputDecoration(colorScheme),
+                    items: [
+                      const DropdownMenuItem<String?>(
+                        value: null,
+                        child: Text('指定なし'),
+                      ),
+                      for (final item in items)
+                        DropdownMenuItem<String?>(
+                          value: item.value,
+                          child: Text(item.label),
+                        ),
+                    ],
+                    onChanged: (value) => setState(() => _original = value),
+                  );
+                },
+                loading: () => const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+                error: (error, _) => Text(
+                  '原作一覧の取得に失敗しました: $error',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: colorScheme.error),
+                ),
+              ),
+              const SizedBox(height: 32),
+            ],
+
             // Search button
             FilledButton.icon(
               onPressed: _submit,
@@ -170,13 +216,20 @@ class _NarouSearchPageState extends State<NarouSearchPage> {
       query: _queryController.text,
       target: _target,
       genreCode: _genreCode,
+      original: _original,
       order: NovelSearchOrder.newest,
     );
 
-    if (!request.hasQuery && request.genreCode == null) {
+    if (!request.hasQuery &&
+        request.genreCode == null &&
+        request.original == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('テキストかジャンルを指定してください。'),
+          content: Text(
+            widget.site == NovelSite.hameln
+                ? 'テキストか原作を指定してください。'
+                : 'テキストかジャンルを指定してください。',
+          ),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),

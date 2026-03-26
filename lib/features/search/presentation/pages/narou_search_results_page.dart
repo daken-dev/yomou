@@ -64,7 +64,7 @@ class NarouSearchResultsPage extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(left: 22),
                   child: Text(
-                    '${request.target.label} · ${_genreLabel(request.genreCode)}',
+                    '${_targetOrOriginalLabel()} · ${_genreLabel(request.genreCode, request.original)}',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: colorScheme.onSurfaceVariant,
                     ),
@@ -131,7 +131,17 @@ class NarouSearchResultsPage extends StatelessWidget {
     ).toString();
   }
 
-  String _genreLabel(int? code) {
+  String _targetOrOriginalLabel() {
+    return request.site == NovelSite.hameln ? '原作検索' : request.target.label;
+  }
+
+  String _genreLabel(int? code, String? original) {
+    if (request.site == NovelSite.hameln) {
+      if (original == null || original.isEmpty) {
+        return '全原作';
+      }
+      return original.replaceFirst('原作：', '');
+    }
     if (code == null) {
       return '全ジャンル';
     }
@@ -149,6 +159,7 @@ List<NovelSearchOrder> _searchOrdersFor(NovelSite site) {
       NovelSearchOrder.weeklyPoint,
       NovelSearchOrder.overallPoint,
     ],
+    NovelSite.hameln => NovelSearchOrderX.selectableValues,
     _ => NovelSearchOrderX.selectableValues,
   };
 }

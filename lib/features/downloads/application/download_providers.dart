@@ -8,6 +8,7 @@ import 'package:yomou/features/aozora/data/aozora_index_store.dart';
 import 'package:yomou/features/aozora/data/aozora_text_client.dart';
 import 'package:yomou/features/downloads/application/download_scheduler.dart';
 import 'package:yomou/features/downloads/data/download_store.dart';
+import 'package:yomou/features/hameln/data/hameln_web_client.dart';
 import 'package:yomou/features/kakuyomu/data/kakuyomu_web_client.dart';
 import 'package:yomou/features/downloads/data/narou_web_client.dart';
 import 'package:yomou/features/downloads/domain/entities/download_job_overview.dart';
@@ -44,6 +45,7 @@ final downloadSchedulerProvider = Provider<DownloadScheduler>((ref) {
     ref.watch(downloadStoreProvider),
     ref.watch(narouWebClientProvider),
     ref.watch(kakuyomuWebClientProvider),
+    ref.watch(hamelnWebClientProvider),
     ref.watch(aozoraIndexStoreProvider),
     ref.watch(aozoraTextClientProvider),
   );

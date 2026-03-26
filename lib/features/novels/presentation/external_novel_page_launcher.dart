@@ -42,6 +42,12 @@ Uri? buildWorkPageUri(NovelSite site, String novelId, {String? aozoraCardUrl}) {
         return null;
       }
       return Uri.https('kakuyomu.jp', '/works/$normalized');
+    case NovelSite.hameln:
+      final normalized = novelId.trim();
+      if (normalized.isEmpty) {
+        return null;
+      }
+      return Uri.https('syosetu.org', '/novel/$normalized/');
     case NovelSite.aozora:
       final url = aozoraCardUrl?.trim();
       if (url == null || url.isEmpty) {

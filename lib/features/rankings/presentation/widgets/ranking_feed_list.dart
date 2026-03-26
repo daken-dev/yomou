@@ -155,6 +155,7 @@ class RankingFeedList extends ConsumerWidget {
       NovelSite.narou => '/narou/novel/$id',
       NovelSite.narouR18 => '/narou-r18/novel/$id',
       NovelSite.kakuyomu => '/kakuyomu/novel/$id',
+      NovelSite.hameln => '/hameln/novel/$id',
       NovelSite.aozora => '/aozora/novel/$id',
     };
   }

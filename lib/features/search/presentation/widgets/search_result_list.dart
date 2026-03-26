@@ -121,7 +121,9 @@ class SearchResultList extends ConsumerWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '別のキーワードやジャンルで検索してみてください',
+                    request.site == NovelSite.hameln
+                        ? '別のキーワードや原作で検索してみてください'
+                        : '別のキーワードやジャンルで検索してみてください',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: colorScheme.onSurfaceVariant,
                     ),
@@ -249,6 +251,7 @@ class SearchResultList extends ConsumerWidget {
       NovelSite.narou => '/narou/novel/$id',
       NovelSite.narouR18 => '/narou-r18/novel/$id',
       NovelSite.kakuyomu => '/kakuyomu/novel/$id',
+      NovelSite.hameln => '/hameln/novel/$id',
       NovelSite.aozora => '/aozora/novel/$id',
     };
   }

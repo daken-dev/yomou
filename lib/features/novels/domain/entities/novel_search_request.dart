@@ -8,6 +8,7 @@ class NovelSearchRequest {
     this.query = '',
     this.target = NovelSearchTarget.all,
     this.genreCode,
+    this.original,
     this.order = NovelSearchOrder.newest,
     this.page = 1,
     this.pageSize = 20,
@@ -19,6 +20,7 @@ class NovelSearchRequest {
   final String query;
   final NovelSearchTarget target;
   final int? genreCode;
+  final String? original;
   final NovelSearchOrder order;
   final int page;
   final int pageSize;
@@ -31,6 +33,8 @@ class NovelSearchRequest {
       if (hasQuery) 'q': normalizedQuery,
       'target': target.queryValue,
       if (genreCode != null) 'genre': '$genreCode',
+      if (original case final original? when original.trim().isNotEmpty)
+        'original': original.trim(),
       'order': order.queryValue,
     };
   }
@@ -40,6 +44,7 @@ class NovelSearchRequest {
     String? query,
     NovelSearchTarget? target,
     Object? genreCode = _unset,
+    Object? original = _unset,
     NovelSearchOrder? order,
     int? page,
     int? pageSize,
@@ -51,6 +56,9 @@ class NovelSearchRequest {
       genreCode: identical(genreCode, _unset)
           ? this.genreCode
           : genreCode as int?,
+      original: identical(original, _unset)
+          ? this.original
+          : original as String?,
       order: order ?? this.order,
       page: page ?? this.page,
       pageSize: pageSize ?? this.pageSize,
@@ -65,6 +73,7 @@ class NovelSearchRequest {
             normalizedQuery == other.normalizedQuery &&
             target == other.target &&
             genreCode == other.genreCode &&
+            original == other.original &&
             order == other.order &&
             page == other.page &&
             pageSize == other.pageSize;
@@ -76,6 +85,7 @@ class NovelSearchRequest {
     normalizedQuery,
     target,
     genreCode,
+    original,
     order,
     page,
     pageSize,

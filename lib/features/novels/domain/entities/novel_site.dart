@@ -1,4 +1,4 @@
-enum NovelSite { narou, narouR18, kakuyomu, aozora }
+enum NovelSite { narou, narouR18, kakuyomu, hameln, aozora }
 
 extension NovelSiteX on NovelSite {
   String get displayName {
@@ -6,6 +6,7 @@ extension NovelSiteX on NovelSite {
       NovelSite.narou => 'なろう',
       NovelSite.narouR18 => 'なろうR18',
       NovelSite.kakuyomu => 'カクヨム',
+      NovelSite.hameln => 'ハーメルン',
       NovelSite.aozora => '青空文庫',
     };
   }
@@ -15,6 +16,7 @@ extension NovelSiteX on NovelSite {
       NovelSite.narou => '/narou',
       NovelSite.narouR18 => '/narou-r18',
       NovelSite.kakuyomu => '/kakuyomu',
+      NovelSite.hameln => '/hameln',
       NovelSite.aozora => '/aozora',
     };
   }
@@ -24,6 +26,7 @@ extension NovelSiteX on NovelSite {
       NovelSite.narou => 'ncode.syosetu.com',
       NovelSite.narouR18 => 'novel18.syosetu.com',
       NovelSite.kakuyomu => null,
+      NovelSite.hameln => null,
       NovelSite.aozora => null,
     };
   }

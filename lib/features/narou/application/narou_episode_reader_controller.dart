@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:yomou/features/downloads/data/narou_web_client.dart';
+import 'package:yomou/features/hameln/data/hameln_web_client.dart';
 import 'package:yomou/features/kakuyomu/data/kakuyomu_web_client.dart';
 import 'package:yomou/features/novels/domain/entities/novel_site.dart';
 
@@ -8,22 +9,33 @@ final narouEpisodeReaderProvider = FutureProvider.autoDispose
       ref,
       request,
     ) async {
-      final page = request.site == NovelSite.kakuyomu
-          ? await ref
-                .watch(kakuyomuWebClientProvider)
-                .fetchEpisodePage(
-                  request.novelId,
-                  request.episodeNo,
-                  url: request.episodeUrl,
-                )
-          : await ref
-                .watch(narouWebClientProvider)
-                .fetchEpisodePage(
-                  request.novelId,
-                  request.episodeNo,
-                  site: request.site,
-                  url: request.episodeUrl,
-                );
+      final page = switch (request.site) {
+        NovelSite.kakuyomu =>
+          await ref
+              .watch(kakuyomuWebClientProvider)
+              .fetchEpisodePage(
+                request.novelId,
+                request.episodeNo,
+                url: request.episodeUrl,
+              ),
+        NovelSite.hameln =>
+          await ref
+              .watch(hamelnWebClientProvider)
+              .fetchEpisodePage(
+                request.novelId,
+                request.episodeNo,
+                url: request.episodeUrl,
+              ),
+        _ =>
+          await ref
+              .watch(narouWebClientProvider)
+              .fetchEpisodePage(
+                request.novelId,
+                request.episodeNo,
+                site: request.site,
+                url: request.episodeUrl,
+              ),
+      };
 
       return NarouEpisodeReaderData(
         page: page,
