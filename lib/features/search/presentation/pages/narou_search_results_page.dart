@@ -7,6 +7,7 @@ import 'package:yomou/features/novels/domain/entities/novel_search_order.dart';
 import 'package:yomou/features/novels/domain/entities/novel_search_request.dart';
 import 'package:yomou/features/novels/domain/entities/novel_search_target.dart';
 import 'package:yomou/features/novels/domain/entities/novel_site.dart';
+import 'package:yomou/features/novelup/domain/entities/novelup_genre.dart';
 import 'package:yomou/features/search/presentation/widgets/search_result_list.dart';
 
 class NarouSearchResultsPage extends StatelessWidget {
@@ -148,6 +149,9 @@ class NarouSearchResultsPage extends StatelessWidget {
     if (request.site == NovelSite.kakuyomu) {
       return KakuyomuGenre.labelOfCode(code);
     }
+    if (request.site == NovelSite.novelup) {
+      return NovelupGenre.labelOfCode(code);
+    }
     return NarouGenre.labelOf(code);
   }
 }
@@ -157,6 +161,12 @@ List<NovelSearchOrder> _searchOrdersFor(NovelSite site) {
     NovelSite.kakuyomu => const <NovelSearchOrder>[
       NovelSearchOrder.newest,
       NovelSearchOrder.weeklyPoint,
+      NovelSearchOrder.overallPoint,
+    ],
+    NovelSite.novelup => const <NovelSearchOrder>[
+      NovelSearchOrder.newest,
+      NovelSearchOrder.updated,
+      NovelSearchOrder.dailyPoint,
       NovelSearchOrder.overallPoint,
     ],
     NovelSite.hameln => NovelSearchOrderX.selectableValues,

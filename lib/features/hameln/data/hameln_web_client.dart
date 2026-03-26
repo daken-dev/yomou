@@ -372,6 +372,7 @@ class HamelnWebClient {
   String _searchOrderValue(NovelSearchOrder order) {
     return switch (order) {
       NovelSearchOrder.newest => '0',
+      NovelSearchOrder.updated => '0',
       NovelSearchOrder.overallPoint => '28',
       NovelSearchOrder.dailyPoint => '29',
       NovelSearchOrder.weeklyPoint => '30',

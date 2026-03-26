@@ -258,6 +258,7 @@ class SavedNovelTile extends ConsumerWidget {
       NovelSite.narou => '/narou/novel/${novel.id}',
       NovelSite.narouR18 => '/narou-r18/novel/${novel.id}',
       NovelSite.kakuyomu => '/kakuyomu/novel/${novel.id}',
+      NovelSite.novelup => '/novelup/novel/${novel.id}',
       NovelSite.hameln => '/hameln/novel/${novel.id}',
       NovelSite.aozora => '/aozora/novel/${novel.id}',
     };

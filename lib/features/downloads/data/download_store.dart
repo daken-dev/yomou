@@ -1497,6 +1497,7 @@ class DownloadStore {
       NovelSite.narouR18 =>
         'https://novel18.syosetu.com/novelview/infotop/ncode/${novelId.toLowerCase()}/',
       NovelSite.kakuyomu => 'https://kakuyomu.jp/works/$novelId',
+      NovelSite.novelup => 'https://novelup.plus/story/$novelId',
       NovelSite.hameln => 'https://syosetu.org/?mode=ss_detail&nid=$novelId',
       NovelSite.aozora => null,
     };
@@ -1508,6 +1509,7 @@ class DownloadStore {
       NovelSite.narouR18 =>
         'https://novel18.syosetu.com/${novelId.toLowerCase()}/',
       NovelSite.kakuyomu => 'https://kakuyomu.jp/works/$novelId',
+      NovelSite.novelup => 'https://novelup.plus/story/$novelId',
       NovelSite.hameln => 'https://syosetu.org/novel/$novelId/',
       NovelSite.aozora => null,
     };

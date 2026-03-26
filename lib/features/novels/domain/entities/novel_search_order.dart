@@ -1,5 +1,6 @@
 enum NovelSearchOrder {
   newest,
+  updated,
   overallPoint,
   dailyPoint,
   weeklyPoint,
@@ -11,6 +12,7 @@ enum NovelSearchOrder {
 extension NovelSearchOrderX on NovelSearchOrder {
   static const List<NovelSearchOrder> selectableValues = <NovelSearchOrder>[
     NovelSearchOrder.newest,
+    NovelSearchOrder.updated,
     NovelSearchOrder.dailyPoint,
     NovelSearchOrder.weeklyPoint,
     NovelSearchOrder.monthlyPoint,
@@ -22,6 +24,7 @@ extension NovelSearchOrderX on NovelSearchOrder {
   String get queryValue {
     return switch (this) {
       NovelSearchOrder.newest => 'new',
+      NovelSearchOrder.updated => 'updated',
       NovelSearchOrder.overallPoint => 'overall',
       NovelSearchOrder.dailyPoint => 'daily',
       NovelSearchOrder.weeklyPoint => 'weekly',
@@ -34,6 +37,7 @@ extension NovelSearchOrderX on NovelSearchOrder {
   String get label {
     return switch (this) {
       NovelSearchOrder.newest => '新着',
+      NovelSearchOrder.updated => '更新',
       NovelSearchOrder.overallPoint => '総合',
       NovelSearchOrder.dailyPoint => '日間',
       NovelSearchOrder.weeklyPoint => '週間',
@@ -46,6 +50,7 @@ extension NovelSearchOrderX on NovelSearchOrder {
   static NovelSearchOrder fromQueryValue(String? value) {
     return switch (value) {
       'overall' => NovelSearchOrder.overallPoint,
+      'updated' => NovelSearchOrder.updated,
       'daily' => NovelSearchOrder.dailyPoint,
       'weekly' => NovelSearchOrder.weeklyPoint,
       'monthly' => NovelSearchOrder.monthlyPoint,

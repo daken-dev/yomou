@@ -3,6 +3,7 @@ import 'package:yomou/features/downloads/data/narou_web_client.dart';
 import 'package:yomou/features/hameln/data/hameln_web_client.dart';
 import 'package:yomou/features/kakuyomu/data/kakuyomu_web_client.dart';
 import 'package:yomou/features/novels/domain/entities/novel_site.dart';
+import 'package:yomou/features/novelup/data/novelup_web_client.dart';
 
 final narouNovelDetailControllerProvider =
     AsyncNotifierProvider.family<
@@ -88,6 +89,9 @@ class NarouNovelDetailController extends AsyncNotifier<NarouNovelDetailState> {
     if (_site == NovelSite.kakuyomu) {
       return ref.read(kakuyomuWebClientProvider).fetchInfoPage(_novelId);
     }
+    if (_site == NovelSite.novelup) {
+      return ref.read(novelupWebClientProvider).fetchInfoPage(_novelId);
+    }
     if (_site == NovelSite.hameln) {
       return ref.read(hamelnWebClientProvider).fetchInfoPage(_novelId);
     }
@@ -100,6 +104,9 @@ class NarouNovelDetailController extends AsyncNotifier<NarouNovelDetailState> {
   }) {
     if (_site == NovelSite.kakuyomu) {
       return ref.read(kakuyomuWebClientProvider).fetchTocPage(_novelId);
+    }
+    if (_site == NovelSite.novelup) {
+      return ref.read(novelupWebClientProvider).fetchTocPage(_novelId);
     }
     if (_site == NovelSite.hameln) {
       return ref.read(hamelnWebClientProvider).fetchTocPage(_novelId);

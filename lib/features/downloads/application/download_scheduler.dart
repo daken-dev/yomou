@@ -9,12 +9,14 @@ import 'package:yomou/features/kakuyomu/data/kakuyomu_web_client.dart';
 import 'package:yomou/features/downloads/domain/entities/download_job_overview.dart';
 import 'package:yomou/features/novels/domain/entities/novel_site.dart';
 import 'package:yomou/features/novels/domain/entities/novel_summary.dart';
+import 'package:yomou/features/novelup/data/novelup_web_client.dart';
 
 class DownloadScheduler {
   DownloadScheduler(
     this._store,
     this._client,
     this._kakuyomuClient,
+    this._novelupClient,
     this._hamelnClient,
     this._aozoraIndexStore,
     this._aozoraTextClient, {
@@ -31,6 +33,7 @@ class DownloadScheduler {
   final DownloadStore _store;
   final NarouWebClient _client;
   final KakuyomuWebClient _kakuyomuClient;
+  final NovelupWebClient _novelupClient;
   final HamelnWebClient _hamelnClient;
   final AozoraIndexStore _aozoraIndexStore;
   final AozoraTextClient _aozoraTextClient;
@@ -245,6 +248,33 @@ class DownloadScheduler {
           job.novelId,
           result.downloadPlans,
         );
+      case NovelSite.novelup:
+        final infoPage = await _novelupClient.fetchInfoPage(job.novelId);
+        final tocPage = await _novelupClient.fetchTocPage(job.novelId);
+
+        if (!await _store.hasSavedNovel(job.site, job.novelId)) {
+          return;
+        }
+
+        final result = await _store.applyNovelSync(
+          site: job.site,
+          novelId: job.novelId,
+          fallbackTitle: tocPage.title ?? infoPage.title ?? job.novelId,
+          infoPage: infoPage,
+          tocPages: <NarouTocPage>[tocPage],
+          force: job.force,
+          refreshInterval: refreshInterval,
+        );
+
+        if (result.isLocked) {
+          throw UpdateLockedException(result.lockReason ?? '更新ロック');
+        }
+
+        await _store.enqueueEpisodeDownloads(
+          job.site,
+          job.novelId,
+          result.downloadPlans,
+        );
       case NovelSite.hameln:
         final infoPage = await _hamelnClient.fetchInfoPage(job.novelId);
         final tocPage = await _hamelnClient.fetchTocPage(job.novelId);
@@ -340,6 +370,27 @@ class DownloadScheduler {
           return;
         }
         final page = await _kakuyomuClient.fetchEpisodePage(
+          job.novelId,
+          episodeNo,
+          url: episodeUrl,
+        );
+        await _store.markEpisodeDownloaded(
+          site: job.site,
+          novelId: job.novelId,
+          episodeNo: episodeNo,
+          page: page,
+          excludingJobId: job.id,
+        );
+      case NovelSite.novelup:
+        final episodeUrl = await _store.episodeUrlFor(
+          job.site,
+          job.novelId,
+          episodeNo,
+        );
+        if (!await _store.hasSavedNovel(job.site, job.novelId)) {
+          return;
+        }
+        final page = await _novelupClient.fetchEpisodePage(
           job.novelId,
           episodeNo,
           url: episodeUrl,

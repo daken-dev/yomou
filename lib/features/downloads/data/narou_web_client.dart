@@ -21,6 +21,9 @@ String narouBaseUrlForSite(NovelSite site) {
     NovelSite.kakuyomu => throw UnsupportedError(
       'Kakuyomu does not use Narou web client',
     ),
+    NovelSite.novelup => throw UnsupportedError(
+      'NovelUp does not use Narou web client',
+    ),
     NovelSite.hameln => throw UnsupportedError(
       'Hameln does not use Narou web client',
     ),

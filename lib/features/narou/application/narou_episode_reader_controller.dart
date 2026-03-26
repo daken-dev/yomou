@@ -3,6 +3,7 @@ import 'package:yomou/features/downloads/data/narou_web_client.dart';
 import 'package:yomou/features/hameln/data/hameln_web_client.dart';
 import 'package:yomou/features/kakuyomu/data/kakuyomu_web_client.dart';
 import 'package:yomou/features/novels/domain/entities/novel_site.dart';
+import 'package:yomou/features/novelup/data/novelup_web_client.dart';
 
 final narouEpisodeReaderProvider = FutureProvider.autoDispose
     .family<NarouEpisodeReaderData, NarouEpisodeReaderRequest>((
@@ -13,6 +14,14 @@ final narouEpisodeReaderProvider = FutureProvider.autoDispose
         NovelSite.kakuyomu =>
           await ref
               .watch(kakuyomuWebClientProvider)
+              .fetchEpisodePage(
+                request.novelId,
+                request.episodeNo,
+                url: request.episodeUrl,
+              ),
+        NovelSite.novelup =>
+          await ref
+              .watch(novelupWebClientProvider)
               .fetchEpisodePage(
                 request.novelId,
                 request.episodeNo,
@@ -40,9 +49,13 @@ final narouEpisodeReaderProvider = FutureProvider.autoDispose
       return NarouEpisodeReaderData(
         page: page,
         previousEpisodeNo:
-            extractEpisodeNumber(page.prevUrl) ?? _previousEpisodeNo(page),
+            request.site == NovelSite.novelup
+            ? _previousEpisodeNo(page)
+            : extractEpisodeNumber(page.prevUrl) ?? _previousEpisodeNo(page),
         nextEpisodeNo:
-            extractEpisodeNumber(page.nextUrl) ?? _nextEpisodeNo(page),
+            request.site == NovelSite.novelup
+            ? _nextEpisodeNo(page)
+            : extractEpisodeNumber(page.nextUrl) ?? _nextEpisodeNo(page),
       );
     });
 

@@ -15,6 +15,7 @@ import 'package:yomou/features/downloads/domain/entities/download_job_overview.d
 import 'package:yomou/features/downloads/domain/entities/download_status_snapshot.dart';
 import 'package:yomou/features/downloads/domain/entities/saved_novel_overview.dart';
 import 'package:yomou/features/novels/domain/entities/novel_site.dart';
+import 'package:yomou/features/novelup/data/novelup_web_client.dart';
 
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
   final database = AppDatabase();
@@ -45,6 +46,7 @@ final downloadSchedulerProvider = Provider<DownloadScheduler>((ref) {
     ref.watch(downloadStoreProvider),
     ref.watch(narouWebClientProvider),
     ref.watch(kakuyomuWebClientProvider),
+    ref.watch(novelupWebClientProvider),
     ref.watch(hamelnWebClientProvider),
     ref.watch(aozoraIndexStoreProvider),
     ref.watch(aozoraTextClientProvider),

@@ -27,6 +27,9 @@ class NarouApiClient {
     NovelSite.kakuyomu => throw UnsupportedError(
       'Kakuyomu does not use Narou API',
     ),
+    NovelSite.novelup => throw UnsupportedError(
+      'NovelUp does not use Narou API',
+    ),
     NovelSite.hameln => throw UnsupportedError('Hameln does not use Narou API'),
     NovelSite.aozora => throw UnsupportedError('Aozora does not use Narou API'),
   };
@@ -160,6 +163,7 @@ class NarouApiClient {
   String _searchOrder(NovelSearchOrder order) {
     return switch (order) {
       NovelSearchOrder.newest => 'new',
+      NovelSearchOrder.updated => 'new',
       NovelSearchOrder.overallPoint => 'hyoka',
       NovelSearchOrder.dailyPoint => 'dailypoint',
       NovelSearchOrder.weeklyPoint => 'weeklypoint',

@@ -9,6 +9,7 @@ import 'package:yomou/features/novels/domain/entities/novel_search_order.dart';
 import 'package:yomou/features/novels/domain/entities/novel_search_request.dart';
 import 'package:yomou/features/novels/domain/entities/novel_search_target.dart';
 import 'package:yomou/features/novels/domain/entities/novel_site.dart';
+import 'package:yomou/features/novelup/domain/entities/novelup_genre.dart';
 
 class NarouSearchPage extends ConsumerStatefulWidget {
   const NarouSearchPage({super.key, required this.site});
@@ -42,7 +43,9 @@ class _NarouSearchPageState extends ConsumerState<NarouSearchPage> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final supportsTarget =
-        widget.site != NovelSite.kakuyomu && widget.site != NovelSite.hameln;
+        widget.site != NovelSite.kakuyomu &&
+        widget.site != NovelSite.novelup &&
+        widget.site != NovelSite.hameln;
     final supportsGenre = widget.site != NovelSite.hameln;
     final supportsOriginal = widget.site == NovelSite.hameln;
     final genreItems = _genreOptions(widget.site);
@@ -91,6 +94,8 @@ class _NarouSearchPageState extends ConsumerState<NarouSearchPage> {
                   },
                 ),
                 hintText: widget.site == NovelSite.kakuyomu
+                    ? '作品名やキーワード'
+                    : widget.site == NovelSite.novelup
                     ? '作品名やキーワード'
                     : widget.site == NovelSite.hameln
                     ? '作品名や本文キーワード'
@@ -228,6 +233,9 @@ class _NarouSearchPageState extends ConsumerState<NarouSearchPage> {
           content: Text(
             widget.site == NovelSite.hameln
                 ? 'テキストか原作を指定してください。'
+                : widget.site == NovelSite.kakuyomu ||
+                      widget.site == NovelSite.novelup
+                ? 'テキストを指定してください。'
                 : 'テキストかジャンルを指定してください。',
           ),
           behavior: SnackBarBehavior.floating,
@@ -262,9 +270,13 @@ InputDecoration _inputDecoration(ColorScheme colorScheme) {
 }
 
 List<({int code, String label})> _genreOptions(NovelSite site) {
-  return switch (site) {
-    NovelSite.kakuyomu => [
+    return switch (site) {
+      NovelSite.kakuyomu => [
       for (final genre in KakuyomuGenre.values)
+        (code: genre.code, label: genre.label),
+    ],
+    NovelSite.novelup => [
+      for (final genre in NovelupGenre.values)
         (code: genre.code, label: genre.label),
     ],
     _ => [

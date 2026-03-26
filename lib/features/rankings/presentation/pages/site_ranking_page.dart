@@ -40,6 +40,15 @@ class SiteRankingPage extends StatelessWidget {
     (label: '総合', periodValue: 'overall'),
   ];
 
+  static const _novelupTabs = <({String label, String? periodValue})>[
+    (label: '新着', periodValue: 'new'),
+    (label: '日間', periodValue: 'daily'),
+    (label: '週間', periodValue: 'weekly'),
+    (label: '月間', periodValue: 'monthly'),
+    (label: '年間', periodValue: 'yearly'),
+    (label: '総合', periodValue: 'overall'),
+  ];
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -126,8 +135,18 @@ class SiteRankingPage extends StatelessWidget {
   }
 
   NovelRankingPeriod _effectivePeriod() {
-    if (site != NovelSite.kakuyomu) {
+    if (site != NovelSite.kakuyomu && site != NovelSite.novelup) {
       return period;
+    }
+    if (site == NovelSite.novelup) {
+      return switch (period) {
+        NovelRankingPeriod.daily => NovelRankingPeriod.daily,
+        NovelRankingPeriod.weekly => NovelRankingPeriod.weekly,
+        NovelRankingPeriod.monthly => NovelRankingPeriod.monthly,
+        NovelRankingPeriod.yearly => NovelRankingPeriod.yearly,
+        NovelRankingPeriod.overall => NovelRankingPeriod.overall,
+        NovelRankingPeriod.quarterly => NovelRankingPeriod.monthly,
+      };
     }
     return switch (period) {
       NovelRankingPeriod.overall => NovelRankingPeriod.overall,
@@ -147,6 +166,7 @@ class SiteRankingPage extends StatelessWidget {
   List<({String label, String? periodValue})> _tabsFor(NovelSite site) {
     return switch (site) {
       NovelSite.kakuyomu => _kakuyomuTabs,
+      NovelSite.novelup => _novelupTabs,
       _ => _narouTabs,
     };
   }
