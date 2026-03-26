@@ -57,13 +57,19 @@ jobs:
       - name: Build release app bundle
         run: flutter build appbundle --release --build-name "${GITHUB_REF_NAME#v}" --build-number "${GITHUB_RUN_NUMBER}"
 
+      - name: Stage Android artifacts
+        run: |
+          mkdir -p dist
+          cp build/app/outputs/flutter-apk/app-release.apk dist/app-release.apk
+          cp build/app/outputs/bundle/release/app-release.aab dist/app-release.aab
+
       - name: Upload Android artifacts
         uses: actions/upload-artifact@v4
         with:
           name: android-release
           path: |
-            build/app/outputs/flutter-apk/app-release.apk
-            build/app/outputs/bundle/release/app-release.aab
+            dist/app-release.apk
+            dist/app-release.aab
 
   windows:
     runs-on: windows-latest
