@@ -1,6 +1,6 @@
 import argparse
 
-from parser_common import absolute_url, block_text, element_text, get_soup, parse_meta_tags, print_json
+from .parser_common import absolute_url, block_text, element_text, get_soup, parse_meta_tags, print_json
 
 
 def parse_info_page(url: str) -> dict:

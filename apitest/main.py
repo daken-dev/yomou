@@ -1,13 +1,12 @@
 import argparse
 
-from episode_page_parser import parse_episode_page
-from info_page_parser import parse_info_page
-from parser_common import print_json
-from toc_page_parser import parse_toc_page
+from narou import parse_episode_page, parse_info_page, parse_toc_page
+from narou.parser_common import print_json
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
+    parser.add_argument("site", nargs="?", default="narou", choices=["narou"])
     parser.add_argument("page_type", choices=["info", "toc", "episode"])
     parser.add_argument("url")
     args = parser.parse_args()

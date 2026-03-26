@@ -1,7 +1,7 @@
 import argparse
 import re
 
-from parser_common import (
+from .parser_common import (
     absolute_url,
     block_text,
     build_info_url,
@@ -20,7 +20,7 @@ def parse_short_story_info(url: str) -> dict | None:
     if not info_url:
         return None
 
-    from info_page_parser import parse_info_page
+    from .info_page_parser import parse_info_page
 
     return parse_info_page(info_url)
 

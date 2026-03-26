@@ -11,7 +11,7 @@ from curl_cffi import requests
 BASE_URL = "https://ncode.syosetu.com"
 
 client = requests.Session(impersonate="chrome")
-cache = sqlite3.connect(Path(__file__).parent / "datas" / "cache.db")
+cache = sqlite3.connect(Path(__file__).resolve().parent.parent / "datas" / "cache.db")
 cache.execute(
     """
     CREATE TABLE IF NOT EXISTS cache (

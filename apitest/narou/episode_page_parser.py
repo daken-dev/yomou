@@ -1,8 +1,8 @@
 import argparse
 import re
 
-from parser_common import absolute_url, block_text, element_text, get_soup, parse_meta_tags, print_json
-from toc_page_parser import parse_toc_page
+from .parser_common import absolute_url, block_text, element_text, get_soup, parse_meta_tags, print_json
+from .toc_page_parser import parse_toc_page
 
 
 def find_body_sections(soup):
