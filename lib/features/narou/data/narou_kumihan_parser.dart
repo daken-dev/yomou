@@ -46,7 +46,115 @@ class NarouKumihanParser {
       );
     }
 
+    final headerBlocks = _buildTitleHeader(page);
+    if (headerBlocks.isNotEmpty) {
+      blocks.insertAll(0, headerBlocks);
+    }
+
     return KumihanDocument(blocks: blocks, headerTitle: _headerTitle(page));
+  }
+
+  List<KumihanBlock> _buildTitleHeader(NarouEpisodePage page) {
+    final blocks = <KumihanBlock>[];
+    final isShortStory =
+        page.sequenceTotal != null &&
+        page.sequenceTotal == 1 &&
+        page.prevUrl == null &&
+        page.nextUrl == null;
+    final isFirstEpisode = page.sequenceCurrent == 1;
+    final novelTitle = (page.novelTitle ?? '').trim();
+    final authorName = (page.authorName ?? '').trim();
+    final episodeTitle = (page.title ?? '').trim();
+
+    if (isShortStory) {
+      // 短編: 作品タイトル + 作者名
+      if (novelTitle.isNotEmpty) {
+        blocks.add(
+          KumihanParagraphBlock(
+            children: <KumihanInline>[
+              KumihanStyledInline(
+                children: <KumihanInline>[KumihanTextInline(novelTitle)],
+                style: '大見出し',
+              ),
+            ],
+          ),
+        );
+      }
+      if (authorName.isNotEmpty) {
+        blocks.add(
+          const KumihanParagraphBlock(children: <KumihanInline>[]),
+        );
+        blocks.add(
+          KumihanParagraphBlock(
+            children: <KumihanInline>[KumihanTextInline(authorName)],
+          ),
+        );
+      }
+    } else if (isFirstEpisode) {
+      // 連載1話目: 作品タイトル + 作者名 + エピソードタイトル
+      if (novelTitle.isNotEmpty) {
+        blocks.add(
+          KumihanParagraphBlock(
+            children: <KumihanInline>[
+              KumihanStyledInline(
+                children: <KumihanInline>[KumihanTextInline(novelTitle)],
+                style: '大見出し',
+              ),
+            ],
+          ),
+        );
+      }
+      if (authorName.isNotEmpty) {
+        blocks.add(
+          const KumihanParagraphBlock(children: <KumihanInline>[]),
+        );
+        blocks.add(
+          KumihanParagraphBlock(
+            children: <KumihanInline>[KumihanTextInline(authorName)],
+          ),
+        );
+      }
+      if (episodeTitle.isNotEmpty) {
+        blocks.add(
+          const KumihanParagraphBlock(children: <KumihanInline>[]),
+        );
+        blocks.add(
+          KumihanParagraphBlock(
+            children: <KumihanInline>[
+              KumihanStyledInline(
+                children: <KumihanInline>[KumihanTextInline(episodeTitle)],
+                style: '中見出し',
+              ),
+            ],
+          ),
+        );
+      }
+    } else {
+      // 連載2話目以降: エピソードタイトルのみ
+      if (episodeTitle.isNotEmpty) {
+        blocks.add(
+          KumihanParagraphBlock(
+            children: <KumihanInline>[
+              KumihanStyledInline(
+                children: <KumihanInline>[KumihanTextInline(episodeTitle)],
+                style: '中見出し',
+              ),
+            ],
+          ),
+        );
+      }
+    }
+
+    if (blocks.isNotEmpty) {
+      blocks.add(
+        const KumihanParagraphBlock(children: <KumihanInline>[]),
+      );
+      blocks.add(
+        const KumihanParagraphBlock(children: <KumihanInline>[]),
+      );
+    }
+
+    return blocks;
   }
 
   void _appendSection(

@@ -52,11 +52,13 @@ void main() {
       final parsed = const NarouKumihanParser().parseEpisode(page);
 
       expect(parsed.headerTitle, '作品 / 地図');
-      expect(parsed.blocks.first, isA<KumihanParagraphBlock>());
-      expect(
-        (parsed.blocks.first as KumihanParagraphBlock).children.single,
-        isA<KumihanTextInline>(),
-      );
+
+      // 2話目以降: エピソードタイトルのみ表示
+      final firstParagraph =
+          parsed.blocks.first as KumihanParagraphBlock;
+      expect(_paragraphText(firstParagraph.children), '地図');
+      expect(firstParagraph.children.single, isA<KumihanStyledInline>());
+
       expect(
         parsed.blocks.whereType<KumihanParagraphBlock>().where((block) {
           return _paragraphText(block.children) == '――――';
@@ -113,31 +115,44 @@ void main() {
           .whereType<KumihanParagraphBlock>()
           .toList();
 
-      expect(_paragraphText(paragraphs[0].children), '第12話');
+      // 短編ヘッダー: 作品タイトル + 空行 + 作者名 + 空行 + 空行
+      expect(_paragraphText(paragraphs[0].children), '作品');
+      expect(paragraphs[0].children.single, isA<KumihanStyledInline>());
+      expect(_paragraphText(paragraphs[2].children), '作者');
+
+      // 本文コンテンツ（ヘッダー5ブロック分オフセット）
+      final contentParagraphs = paragraphs.sublist(5);
+
+      expect(_paragraphText(contentParagraphs[0].children), '第12話');
       expect(
-        _findTcy(paragraphs[0].children)?.children.single,
+        _findTcy(contentParagraphs[0].children)?.children.single,
         isA<KumihanTextInline>(),
       );
       expect(
-        (_findTcy(paragraphs[0].children)?.children.single as KumihanTextInline)
+        (_findTcy(contentParagraphs[0].children)?.children.single
+                as KumihanTextInline)
             .text,
         '12',
       );
 
-      expect(_paragraphText(paragraphs[1].children), '――――');
+      expect(_paragraphText(contentParagraphs[1].children), '――――');
 
-      expect(_paragraphText(paragraphs[2].children), '第34話');
+      expect(_paragraphText(contentParagraphs[2].children), '第34話');
       expect(
-        (_findTcy(paragraphs[2].children)?.children.single as KumihanTextInline)
+        (_findTcy(contentParagraphs[2].children)?.children.single
+                as KumihanTextInline)
             .text,
         '34',
       );
 
-      expect(paragraphs[3].children, hasLength(1));
-      expect(paragraphs[3].children.single, isA<KumihanTextInline>());
-      expect((paragraphs[3].children.single as KumihanTextInline).text, '123');
+      expect(contentParagraphs[3].children, hasLength(1));
+      expect(contentParagraphs[3].children.single, isA<KumihanTextInline>());
+      expect(
+        (contentParagraphs[3].children.single as KumihanTextInline).text,
+        '123',
+      );
 
-      expect(_paragraphText(paragraphs[4].children), '――――');
+      expect(_paragraphText(contentParagraphs[4].children), '――――');
     },
   );
 
@@ -202,8 +217,11 @@ void main() {
         .whereType<KumihanParagraphBlock>()
         .toList(growable: false);
 
-    expect(paragraphs, hasLength(1));
-    expect(_paragraphText(paragraphs.single.children), '本文です。');
+    // 短編ヘッダー(5ブロック) + 本文(1ブロック)
+    final contentParagraphs = paragraphs
+        .where((p) => _paragraphText(p.children) == '本文です。')
+        .toList();
+    expect(contentParagraphs, hasLength(1));
   });
 }
 
