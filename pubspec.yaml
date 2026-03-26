@@ -1,7 +1,7 @@
 name: yomou
 description: "汎用小説リーダー"
 publish_to: "none"
-version: 0.0.2
+version: 0.0.3
 
 environment:
   sdk: ^3.12.0-210.2.beta
@@ -10,7 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
-  kumihan: ^0.0.2
+  kumihan: ^0.0.3
   flutter_riverpod: ^3.3.1
   go_router: ^17.1.0
   dio: ^5.9.2

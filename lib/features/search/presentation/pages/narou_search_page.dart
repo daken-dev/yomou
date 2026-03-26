@@ -89,29 +89,36 @@ class _NarouSearchPageState extends State<NarouSearchPage> {
             // Search target section
             _SectionLabel(label: '検索範囲', colorScheme: colorScheme),
             const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: SegmentedButton<NovelSearchTarget>(
-                segments: [
-                  for (final value in NovelSearchTargetX.selectableValues)
-                    ButtonSegment(
-                      value: value,
-                      label: Text(
-                        value.label,
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                    ),
-                ],
-                selected: {_target},
-                onSelectionChanged: (selected) {
-                  setState(() => _target = selected.first);
-                },
-                showSelectedIcon: false,
-                style: ButtonStyle(
-                  visualDensity: VisualDensity.compact,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            DropdownButtonFormField<NovelSearchTarget>(
+              initialValue: _target,
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: colorScheme.primary, width: 2),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
                 ),
               ),
+              items: [
+                for (final value in NovelSearchTargetX.selectableValues)
+                  DropdownMenuItem<NovelSearchTarget>(
+                    value: value,
+                    child: Text(value.label),
+                  ),
+              ],
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() => _target = value);
+                }
+              },
             ),
 
             const SizedBox(height: 24),

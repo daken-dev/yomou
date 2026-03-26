@@ -121,7 +121,9 @@ class _AozoraEpisodeReaderPageState
                   imageLoader: imageLoader,
                   initialSpread: desiredSpreadMode,
                   initialWritingMode: readerSettings.writingMode.kumihanValue,
-                  layout: readerSettings.layout,
+                  layout: readerSettings.buildLayout(
+                    notchPadding: MediaQuery.viewPaddingOf(context).top,
+                  ),
                   theme: readerTheme,
                   tapHandler: _handleTap,
                     onSnapshotChanged: (snapshot) =>

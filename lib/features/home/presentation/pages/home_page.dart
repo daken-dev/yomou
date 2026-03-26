@@ -36,59 +36,88 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     return AppScaffold(
       title: '保存済み作品',
-      body: switch (listSelection) {
-        _HomeNovelListSelection(:final keys?) => Column(
-          children: [
-            _SortControls(
-              sortKey: _sortKey,
-              sortDescending: _sortDescending,
-              remainingZeroToEnd: _remainingZeroToEnd,
-              onSortKeyChanged: (value) {
-                setState(() {
-                  _sortKey = value;
-                });
-              },
-              onSortDescendingChanged: (value) {
-                setState(() {
-                  _sortDescending = value;
-                });
-              },
-              onRemainingZeroToEndChanged: (value) {
-                setState(() {
-                  _remainingZeroToEnd = value;
-                });
-              },
-            ),
-            Expanded(
-              child: keys.isEmpty
-                  ? const Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.library_books_outlined, size: 48),
-                          SizedBox(height: 12),
-                          Text('保存済み作品はありません'),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.only(top: 4, bottom: 16),
-                      itemCount: keys.length,
-                      itemBuilder: (context, index) {
-                        final novelKey = keys[index];
-                        return _HomeSavedNovelTile(
-                          key: ValueKey<String>(
-                            '${novelKey.site.name}:${novelKey.novelId}',
-                          ),
-                          novelKey: novelKey,
-                          openDirectlyInReader:
-                              settings.openHomeNovelDirectlyInReader,
-                        );
-                      },
-                    ),
+      actions: [
+        IconButton(
+          onPressed: () => setState(() => _sortDescending = !_sortDescending),
+          icon: Icon(
+            _sortDescending ? Icons.arrow_downward : Icons.arrow_upward,
+            size: 20,
+          ),
+          tooltip: _sortDescending ? '降順' : '昇順',
+        ),
+        PopupMenuButton<Object>(
+          icon: const Icon(Icons.sort),
+          tooltip: '並べ替え',
+          onSelected: (action) {
+            setState(() {
+              if (action is HomeNovelSortKey) {
+                _sortKey = action;
+              } else if (action == #toggleRemainingZeroToEnd) {
+                _remainingZeroToEnd = !_remainingZeroToEnd;
+              }
+            });
+          },
+          itemBuilder: (context) => [
+            for (final key in HomeNovelSortKey.values)
+              PopupMenuItem<Object>(
+                value: key,
+                child: ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(
+                    _sortKey == key
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_unchecked,
+                    size: 20,
+                  ),
+                  title: Text(key.label),
+                ),
+              ),
+            const PopupMenuDivider(),
+            PopupMenuItem<Object>(
+              value: #toggleRemainingZeroToEnd,
+              child: ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(
+                  _remainingZeroToEnd
+                      ? Icons.check_box
+                      : Icons.check_box_outline_blank,
+                  size: 20,
+                ),
+                title: const Text('読了を最後尾に'),
+              ),
             ),
           ],
         ),
+      ],
+      body: switch (listSelection) {
+        _HomeNovelListSelection(:final keys?) => keys.isEmpty
+            ? const Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.library_books_outlined, size: 48),
+                    SizedBox(height: 12),
+                    Text('保存済み作品はありません'),
+                  ],
+                ),
+              )
+            : ListView.builder(
+                padding: const EdgeInsets.only(top: 4, bottom: 16),
+                itemCount: keys.length,
+                itemBuilder: (context, index) {
+                  final novelKey = keys[index];
+                  return _HomeSavedNovelTile(
+                    key: ValueKey<String>(
+                      '${novelKey.site.name}:${novelKey.novelId}',
+                    ),
+                    novelKey: novelKey,
+                    openDirectlyInReader:
+                        settings.openHomeNovelDirectlyInReader,
+                  );
+                },
+              ),
         _HomeNovelListSelection(:final errorText?) => ListView(
           children: [
             const ListTile(title: Text('保存済み作品の取得に失敗しました。')),
@@ -278,78 +307,4 @@ enum HomeNovelSortKey {
   const HomeNovelSortKey(this.label);
 
   final String label;
-}
-
-class _SortControls extends StatelessWidget {
-  const _SortControls({
-    required this.sortKey,
-    required this.sortDescending,
-    required this.remainingZeroToEnd,
-    required this.onSortKeyChanged,
-    required this.onSortDescendingChanged,
-    required this.onRemainingZeroToEndChanged,
-  });
-
-  final HomeNovelSortKey sortKey;
-  final bool sortDescending;
-  final bool remainingZeroToEnd;
-  final ValueChanged<HomeNovelSortKey> onSortKeyChanged;
-  final ValueChanged<bool> onSortDescendingChanged;
-  final ValueChanged<bool> onRemainingZeroToEndChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-      child: Row(
-        children: [
-          Expanded(
-            child: SegmentedButton<HomeNovelSortKey>(
-              segments: HomeNovelSortKey.values
-                  .map(
-                    (value) => ButtonSegment<HomeNovelSortKey>(
-                      value: value,
-                      label: Text(
-                        value.label,
-                        style: const TextStyle(fontSize: 11),
-                      ),
-                    ),
-                  )
-                  .toList(growable: false),
-              selected: {sortKey},
-              onSelectionChanged: (value) => onSortKeyChanged(value.first),
-              style: const ButtonStyle(
-                visualDensity: VisualDensity.compact,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-            ),
-          ),
-          const SizedBox(width: 4),
-          IconButton(
-            onPressed: () => onSortDescendingChanged(!sortDescending),
-            icon: Icon(
-              sortDescending ? Icons.arrow_downward : Icons.arrow_upward,
-              size: 20,
-            ),
-            tooltip: sortDescending ? '降順' : '昇順',
-            visualDensity: VisualDensity.compact,
-          ),
-          IconButton(
-            onPressed: () => onRemainingZeroToEndChanged(!remainingZeroToEnd),
-            icon: Icon(
-              remainingZeroToEnd
-                  ? Icons.check_circle_rounded
-                  : Icons.check_circle_outline_rounded,
-              size: 20,
-              color: remainingZeroToEnd ? colorScheme.primary : null,
-            ),
-            tooltip: '読了を最後尾に',
-            visualDensity: VisualDensity.compact,
-          ),
-        ],
-      ),
-    );
-  }
 }

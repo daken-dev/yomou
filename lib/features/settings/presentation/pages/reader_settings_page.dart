@@ -70,21 +70,77 @@ class _ReaderSettingsContent extends ConsumerWidget {
                     fontSize: const ReaderSettings.defaults().fontSize,
                   )),
         ),
+        // ── 余白 ──
+        const SizedBox(height: 8),
+        _SectionHeader(title: '余白'),
         _SliderTile(
-          label: '余白',
-          value: reader.pageMarginScale.clamp(0.6, 1.2).toDouble(),
-          displayValue: '${(reader.pageMarginScale * 100).round()}%',
-          min: 0.6,
-          max: 1.2,
+          label: '上',
+          value: reader.paddingTop.clamp(0, 60).toDouble(),
+          displayValue: '${reader.paddingTop.round()}',
+          min: 0,
+          max: 60,
           divisions: 12,
-          onChanged: (value) => save(reader.copyWith(pageMarginScale: value)),
-          onReset: reader.pageMarginScale ==
-                  const ReaderSettings.defaults().pageMarginScale
+          onChanged: (value) => save(reader.copyWith(paddingTop: value)),
+          onReset: reader.paddingTop ==
+                  const ReaderSettings.defaults().paddingTop
               ? null
               : () => save(reader.copyWith(
-                    pageMarginScale:
-                        const ReaderSettings.defaults().pageMarginScale,
+                    paddingTop: const ReaderSettings.defaults().paddingTop,
                   )),
+        ),
+        _SliderTile(
+          label: '下',
+          value: reader.paddingBottom.clamp(0, 60).toDouble(),
+          displayValue: '${reader.paddingBottom.round()}',
+          min: 0,
+          max: 60,
+          divisions: 12,
+          onChanged: (value) => save(reader.copyWith(paddingBottom: value)),
+          onReset: reader.paddingBottom ==
+                  const ReaderSettings.defaults().paddingBottom
+              ? null
+              : () => save(reader.copyWith(
+                    paddingBottom:
+                        const ReaderSettings.defaults().paddingBottom,
+                  )),
+        ),
+        _SliderTile(
+          label: '左',
+          value: reader.paddingLeft.clamp(0, 60).toDouble(),
+          displayValue: '${reader.paddingLeft.round()}',
+          min: 0,
+          max: 60,
+          divisions: 12,
+          onChanged: (value) => save(reader.copyWith(paddingLeft: value)),
+          onReset: reader.paddingLeft ==
+                  const ReaderSettings.defaults().paddingLeft
+              ? null
+              : () => save(reader.copyWith(
+                    paddingLeft: const ReaderSettings.defaults().paddingLeft,
+                  )),
+        ),
+        _SliderTile(
+          label: '右',
+          value: reader.paddingRight.clamp(0, 60).toDouble(),
+          displayValue: '${reader.paddingRight.round()}',
+          min: 0,
+          max: 60,
+          divisions: 12,
+          onChanged: (value) => save(reader.copyWith(paddingRight: value)),
+          onReset: reader.paddingRight ==
+                  const ReaderSettings.defaults().paddingRight
+              ? null
+              : () => save(reader.copyWith(
+                    paddingRight: const ReaderSettings.defaults().paddingRight,
+                  )),
+        ),
+        SwitchListTile(
+          title: const Text('インカメラ回避'),
+          subtitle: const Text('上部の余白にノッチ分を加算する'),
+          value: reader.avoidNotch,
+          onChanged: (value) {
+            save(reader.copyWith(avoidNotch: value));
+          },
         ),
 
         // ── 紙面 ──
@@ -126,6 +182,13 @@ class _ReaderSettingsContent extends ConsumerWidget {
           onChanged: (value) {
             save(reader.copyWith(enableLandscapeDoublePage: value));
           },
+        ),
+        _SegmentedTile<ReaderSinglePagePosition>(
+          label: '単ページ表示位置',
+          segments: ReaderSinglePagePosition.values,
+          selected: reader.singlePagePosition,
+          segmentLabel: (v) => v.label,
+          onChanged: (v) => save(reader.copyWith(singlePagePosition: v)),
         ),
         SwitchListTile(
           title: const Text('前書きを表示'),

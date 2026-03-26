@@ -43,6 +43,11 @@ class _SettingsContent extends ConsumerWidget {
                 .map(
                   (mode) => ButtonSegment<AppThemeMode>(
                     value: mode,
+                    icon: Icon(switch (mode) {
+                      AppThemeMode.system => Icons.brightness_auto,
+                      AppThemeMode.light => Icons.light_mode,
+                      AppThemeMode.dark => Icons.dark_mode,
+                    }),
                     label: Text(mode.label),
                   ),
                 )
@@ -51,6 +56,7 @@ class _SettingsContent extends ConsumerWidget {
             onSelectionChanged: (value) {
               store.saveSettings(settings.copyWith(themeMode: value.first));
             },
+            showSelectedIcon: false,
           ),
         ),
         const SizedBox(height: 8),

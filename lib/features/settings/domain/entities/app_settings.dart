@@ -122,6 +122,43 @@ extension ReaderTapPatternX on ReaderTapPattern {
   }
 }
 
+enum ReaderSinglePagePosition { left, center, right }
+
+extension ReaderSinglePagePositionX on ReaderSinglePagePosition {
+  KumihanSinglePageNumberPosition get kumihanValue {
+    return switch (this) {
+      ReaderSinglePagePosition.left => KumihanSinglePageNumberPosition.left,
+      ReaderSinglePagePosition.center =>
+        KumihanSinglePageNumberPosition.center,
+      ReaderSinglePagePosition.right => KumihanSinglePageNumberPosition.right,
+    };
+  }
+
+  String get storageValue {
+    return switch (this) {
+      ReaderSinglePagePosition.left => 'left',
+      ReaderSinglePagePosition.center => 'center',
+      ReaderSinglePagePosition.right => 'right',
+    };
+  }
+
+  String get label {
+    return switch (this) {
+      ReaderSinglePagePosition.left => '左',
+      ReaderSinglePagePosition.center => '中央',
+      ReaderSinglePagePosition.right => '右',
+    };
+  }
+
+  static ReaderSinglePagePosition fromStorageValue(String? value) {
+    return switch (value) {
+      'left' => ReaderSinglePagePosition.left,
+      'right' => ReaderSinglePagePosition.right,
+      _ => ReaderSinglePagePosition.center,
+    };
+  }
+}
+
 class ReaderSettings {
   const ReaderSettings({
     required this.writingMode,
@@ -129,8 +166,13 @@ class ReaderSettings {
     required this.usePaperTexture,
     required this.paperColorPreset,
     required this.fontSize,
-    required this.pageMarginScale,
+    required this.paddingTop,
+    required this.paddingBottom,
+    required this.paddingLeft,
+    required this.paddingRight,
     required this.enableLandscapeDoublePage,
+    required this.singlePagePosition,
+    required this.avoidNotch,
     required this.showPreface,
     required this.showAfterword,
   });
@@ -141,8 +183,13 @@ class ReaderSettings {
       usePaperTexture = true,
       paperColorPreset = ReaderPaperColorPreset.washi,
       fontSize = 20,
-      pageMarginScale = 0.82,
+      paddingTop = 16,
+      paddingBottom = 16,
+      paddingLeft = 16,
+      paddingRight = 16,
       enableLandscapeDoublePage = true,
+      singlePagePosition = ReaderSinglePagePosition.center,
+      avoidNotch = false,
       showPreface = true,
       showAfterword = true;
 
@@ -151,15 +198,27 @@ class ReaderSettings {
   final bool usePaperTexture;
   final ReaderPaperColorPreset paperColorPreset;
   final double fontSize;
-  final double pageMarginScale;
+  final double paddingTop;
+  final double paddingBottom;
+  final double paddingLeft;
+  final double paddingRight;
   final bool enableLandscapeDoublePage;
+  final ReaderSinglePagePosition singlePagePosition;
+  final bool avoidNotch;
   final bool showPreface;
   final bool showAfterword;
 
-  KumihanLayoutData get layout {
+  KumihanLayoutData buildLayout({double notchPadding = 0}) {
+    final effectiveTop = paddingTop + (avoidNotch ? notchPadding : 0);
     return KumihanLayoutData(
       fontSize: fontSize,
-      pageMarginScale: pageMarginScale,
+      pagePadding: EdgeInsets.fromLTRB(
+        paddingLeft,
+        effectiveTop,
+        paddingRight,
+        paddingBottom,
+      ),
+      singlePageNumberPosition: singlePagePosition.kumihanValue,
     );
   }
 
@@ -209,8 +268,13 @@ class ReaderSettings {
     bool? usePaperTexture,
     ReaderPaperColorPreset? paperColorPreset,
     double? fontSize,
-    double? pageMarginScale,
+    double? paddingTop,
+    double? paddingBottom,
+    double? paddingLeft,
+    double? paddingRight,
     bool? enableLandscapeDoublePage,
+    ReaderSinglePagePosition? singlePagePosition,
+    bool? avoidNotch,
     bool? showPreface,
     bool? showAfterword,
   }) {
@@ -220,9 +284,14 @@ class ReaderSettings {
       usePaperTexture: usePaperTexture ?? this.usePaperTexture,
       paperColorPreset: paperColorPreset ?? this.paperColorPreset,
       fontSize: fontSize ?? this.fontSize,
-      pageMarginScale: pageMarginScale ?? this.pageMarginScale,
+      paddingTop: paddingTop ?? this.paddingTop,
+      paddingBottom: paddingBottom ?? this.paddingBottom,
+      paddingLeft: paddingLeft ?? this.paddingLeft,
+      paddingRight: paddingRight ?? this.paddingRight,
       enableLandscapeDoublePage:
           enableLandscapeDoublePage ?? this.enableLandscapeDoublePage,
+      singlePagePosition: singlePagePosition ?? this.singlePagePosition,
+      avoidNotch: avoidNotch ?? this.avoidNotch,
       showPreface: showPreface ?? this.showPreface,
       showAfterword: showAfterword ?? this.showAfterword,
     );

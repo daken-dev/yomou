@@ -93,7 +93,7 @@ class AppDatabase {
 
     if (currentVersion == 0) {
       _createSchema(database);
-      database.execute('PRAGMA user_version = 6');
+      database.execute('PRAGMA user_version = 7');
       return;
     }
 
@@ -117,7 +117,11 @@ class AppDatabase {
       _migrateToV6(database);
     }
 
-    database.execute('PRAGMA user_version = 6');
+    if (currentVersion < 7) {
+      _migrateToV7(database);
+    }
+
+    database.execute('PRAGMA user_version = 7');
   }
 
   void _createSchema(sqlite.Database database) {
@@ -242,8 +246,13 @@ class AppDatabase {
         reader_use_paper_texture INTEGER NOT NULL DEFAULT 1,
         reader_paper_color TEXT NOT NULL DEFAULT 'washi',
         reader_font_size REAL NOT NULL DEFAULT 20,
-        reader_page_margin_scale REAL NOT NULL DEFAULT 0.82,
+        reader_padding_top REAL NOT NULL DEFAULT 16,
+        reader_padding_bottom REAL NOT NULL DEFAULT 16,
+        reader_padding_left REAL NOT NULL DEFAULT 16,
+        reader_padding_right REAL NOT NULL DEFAULT 16,
         reader_landscape_double_page INTEGER NOT NULL DEFAULT 1,
+        reader_single_page_position TEXT NOT NULL DEFAULT 'center',
+        reader_avoid_notch INTEGER NOT NULL DEFAULT 0,
         reader_show_preface INTEGER NOT NULL DEFAULT 1,
         reader_show_afterword INTEGER NOT NULL DEFAULT 1
       )
@@ -405,6 +414,29 @@ class AppDatabase {
     _addColumnIfMissing(database, 'aozora_works', 'html_encoding', 'TEXT');
     _addColumnIfMissing(database, 'aozora_works', 'inputter', 'TEXT');
     _addColumnIfMissing(database, 'aozora_works', 'proofreader', 'TEXT');
+  }
+
+  void _migrateToV7(sqlite.Database database) {
+    _addColumnIfMissing(
+      database, 'app_settings', 'reader_padding_top', 'REAL NOT NULL DEFAULT 16',
+    );
+    _addColumnIfMissing(
+      database, 'app_settings', 'reader_padding_bottom', 'REAL NOT NULL DEFAULT 16',
+    );
+    _addColumnIfMissing(
+      database, 'app_settings', 'reader_padding_left', 'REAL NOT NULL DEFAULT 16',
+    );
+    _addColumnIfMissing(
+      database, 'app_settings', 'reader_padding_right', 'REAL NOT NULL DEFAULT 16',
+    );
+    _addColumnIfMissing(
+      database, 'app_settings', 'reader_single_page_position',
+      "TEXT NOT NULL DEFAULT 'center'",
+    );
+    _addColumnIfMissing(
+      database, 'app_settings', 'reader_avoid_notch',
+      'INTEGER NOT NULL DEFAULT 0',
+    );
   }
 
   void _addColumnIfMissing(

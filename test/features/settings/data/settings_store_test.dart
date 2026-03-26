@@ -35,8 +35,13 @@ void main() {
         usePaperTexture: false,
         paperColorPreset: ReaderPaperColorPreset.dark,
         fontSize: 24,
-        pageMarginScale: 0.9,
+        paddingTop: 20,
+        paddingBottom: 24,
+        paddingLeft: 8,
+        paddingRight: 12,
         enableLandscapeDoublePage: false,
+        singlePagePosition: ReaderSinglePagePosition.right,
+        avoidNotch: true,
         showPreface: false,
         showAfterword: false,
       ),
@@ -51,8 +56,13 @@ void main() {
     expect(settings.reader.usePaperTexture, isFalse);
     expect(settings.reader.paperColorPreset, ReaderPaperColorPreset.dark);
     expect(settings.reader.fontSize, 24);
-    expect(settings.reader.pageMarginScale, 0.9);
+    expect(settings.reader.paddingTop, 20);
+    expect(settings.reader.paddingBottom, 24);
+    expect(settings.reader.paddingLeft, 8);
+    expect(settings.reader.paddingRight, 12);
     expect(settings.reader.enableLandscapeDoublePage, isFalse);
+    expect(settings.reader.singlePagePosition, ReaderSinglePagePosition.right);
+    expect(settings.reader.avoidNotch, isTrue);
     expect(settings.reader.showPreface, isFalse);
     expect(settings.reader.showAfterword, isFalse);
   });
