@@ -11,6 +11,7 @@ import 'package:yomou/features/downloads/data/download_store.dart';
 import 'package:yomou/features/narou/data/narou_episode_image_cache.dart';
 import 'package:yomou/features/narou/presentation/reader_navigation.dart';
 import 'package:yomou/features/novels/domain/entities/novel_site.dart';
+import 'package:yomou/features/novels/presentation/external_novel_page_launcher.dart';
 import 'package:yomou/features/settings/application/settings_providers.dart';
 import 'package:yomou/features/settings/domain/entities/app_settings.dart';
 
@@ -125,8 +126,10 @@ class _AozoraEpisodeReaderPageState
                     notchPadding: MediaQuery.viewPaddingOf(context).top,
                   ),
                   theme: readerTheme,
+                  onExternalOpen: (url) =>
+                      unawaited(openExternalUrlInBrowser(context, url)),
                   tapHandler: _handleTap,
-                    onSnapshotChanged: (snapshot) =>
+                  onSnapshotChanged: (snapshot) =>
                       _handleSnapshotChanged(snapshot: snapshot),
                 ),
               ),

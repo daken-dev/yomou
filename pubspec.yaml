@@ -17,6 +17,7 @@ dependencies:
   html: ^0.15.6
   path: ^1.9.1
   path_provider: ^2.1.5
+  url_launcher: ^6.3.2
   sqlite3: ^2.9.3
   sqlite3_flutter_libs: ^0.5.38
   archive: ^4.0.9

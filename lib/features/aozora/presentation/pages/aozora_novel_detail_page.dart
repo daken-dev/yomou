@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,8 +9,9 @@ import 'package:yomou/features/downloads/domain/entities/saved_novel_overview.da
 import 'package:yomou/features/navigation/presentation/widgets/app_scaffold.dart';
 import 'package:yomou/features/novels/domain/entities/novel_site.dart';
 import 'package:yomou/features/novels/domain/entities/novel_summary.dart';
+import 'package:yomou/features/novels/presentation/external_novel_page_launcher.dart';
 
-enum _AozoraMenuAction { saveToggle, refresh }
+enum _AozoraMenuAction { openWorkPage, saveToggle, refresh }
 
 class AozoraNovelDetailPage extends ConsumerWidget {
   const AozoraNovelDetailPage({super.key, required this.novelId});
@@ -56,7 +59,17 @@ class AozoraNovelDetailPage extends ConsumerWidget {
           error: error,
           onRetry: () => ref.invalidate(aozoraNovelDetailProvider(novelId)),
         ),
-        data: (data) => _DetailContent(data: data),
+        data: (data) => _DetailContent(
+          data: data,
+          onOpenWorkPage: () => unawaited(
+            openWorkPageInExternalBrowser(
+              context,
+              NovelSite.aozora,
+              novelId,
+              aozoraCardUrl: data.cardUrl,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -67,6 +80,16 @@ class AozoraNovelDetailPage extends ConsumerWidget {
   ) {
     final colorScheme = Theme.of(context).colorScheme;
     return [
+      const PopupMenuItem(
+        value: _AozoraMenuAction.openWorkPage,
+        child: ListTile(
+          leading: Icon(Icons.open_in_new_rounded),
+          title: Text('作品ページを開く'),
+          dense: true,
+          contentPadding: EdgeInsets.zero,
+        ),
+      ),
+      if (savedNovel != null) const PopupMenuDivider(),
       if (savedNovel != null)
         const PopupMenuItem(
           value: _AozoraMenuAction.refresh,
@@ -110,6 +133,16 @@ class AozoraNovelDetailPage extends ConsumerWidget {
     final scheduler = ref.read(downloadSchedulerProvider);
 
     switch (action) {
+      case _AozoraMenuAction.openWorkPage:
+        unawaited(
+          openWorkPageInExternalBrowser(
+            context,
+            NovelSite.aozora,
+            novelId,
+            aozoraCardUrl: detail?.cardUrl,
+          ),
+        );
+        break;
       case _AozoraMenuAction.refresh:
         if (savedNovel != null) {
           scheduler.refreshNovel(savedNovel.site, savedNovel.id);
@@ -219,16 +252,17 @@ class _ErrorView extends StatelessWidget {
 }
 
 class _DetailContent extends StatelessWidget {
-  const _DetailContent({required this.data});
+  const _DetailContent({required this.data, required this.onOpenWorkPage});
 
   final AozoraNovelDetailData data;
+  final VoidCallback onOpenWorkPage;
 
   @override
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.only(bottom: 88),
       children: [
-        _NovelHeader(data: data),
+        _NovelHeader(data: data, onOpenWorkPage: onOpenWorkPage),
         _MetadataSection(data: data),
       ],
     );
@@ -236,9 +270,10 @@ class _DetailContent extends StatelessWidget {
 }
 
 class _NovelHeader extends StatelessWidget {
-  const _NovelHeader({required this.data});
+  const _NovelHeader({required this.data, required this.onOpenWorkPage});
 
   final AozoraNovelDetailData data;
+  final VoidCallback onOpenWorkPage;
 
   @override
   Widget build(BuildContext context) {
@@ -386,23 +421,33 @@ class _NovelHeader extends StatelessWidget {
             if (data.cardUrl != null)
               Padding(
                 padding: const EdgeInsets.only(top: 6),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.link_rounded,
-                      size: 14,
-                      color: colorScheme.onSurfaceVariant,
+                child: InkWell(
+                  onTap: onOpenWorkPage,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 4,
                     ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        '図書カード',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: colorScheme.primary,
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.link_rounded,
+                          size: 14,
+                          color: colorScheme.onSurfaceVariant,
                         ),
-                      ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            '図書カード',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colorScheme.primary,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
           ],

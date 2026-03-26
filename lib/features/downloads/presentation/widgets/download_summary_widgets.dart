@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,8 +7,9 @@ import 'package:yomou/features/downloads/application/download_providers.dart';
 import 'package:yomou/features/downloads/domain/entities/download_job_overview.dart';
 import 'package:yomou/features/downloads/domain/entities/saved_novel_overview.dart';
 import 'package:yomou/features/novels/domain/entities/novel_site.dart';
+import 'package:yomou/features/novels/presentation/external_novel_page_launcher.dart';
 
-enum _NovelMenuAction { episodes, resume, refresh, remove }
+enum _NovelMenuAction { openWorkPage, episodes, resume, refresh, remove }
 
 class SavedNovelTile extends ConsumerWidget {
   const SavedNovelTile({super.key, required this.novel, this.onTap});
@@ -74,7 +77,8 @@ class SavedNovelTile extends ConsumerWidget {
                       ),
                     ),
                   PopupMenuButton<_NovelMenuAction>(
-                    onSelected: (action) => _onMenuAction(context, ref, action),
+                    onSelected: (action) =>
+                        unawaited(_onMenuAction(context, ref, action)),
                     icon: const Icon(Icons.more_vert, size: 20),
                     padding: EdgeInsets.zero,
                     tooltip: 'メニュー',
@@ -141,13 +145,23 @@ class SavedNovelTile extends ConsumerWidget {
     ).then((action) {
       if (action == null) return;
       if (!context.mounted) return;
-      _onMenuAction(context, ref, action);
+      unawaited(_onMenuAction(context, ref, action));
     });
   }
 
   List<PopupMenuEntry<_NovelMenuAction>> _buildMenuItems(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return [
+      const PopupMenuItem(
+        value: _NovelMenuAction.openWorkPage,
+        child: ListTile(
+          leading: Icon(Icons.open_in_new_rounded),
+          title: Text('作品ページを開く'),
+          dense: true,
+          contentPadding: EdgeInsets.zero,
+        ),
+      ),
+      const PopupMenuDivider(),
       const PopupMenuItem(
         value: _NovelMenuAction.episodes,
         child: ListTile(
@@ -192,14 +206,32 @@ class SavedNovelTile extends ConsumerWidget {
     ];
   }
 
-  void _onMenuAction(
+  Future<void> _onMenuAction(
     BuildContext context,
     WidgetRef? ref,
     _NovelMenuAction action,
-  ) {
+  ) async {
     final scheduler = ref?.read(downloadSchedulerProvider);
 
     switch (action) {
+      case _NovelMenuAction.openWorkPage:
+        final cardUrl =
+            novel.site == NovelSite.aozora && ref != null
+            ? (await ref
+                  .read(aozoraIndexStoreProvider)
+                  .findByWorkId(novel.id))
+                  ?.cardUrl
+            : null;
+        if (!context.mounted) {
+          return;
+        }
+        await openWorkPageInExternalBrowser(
+          context,
+          novel.site,
+          novel.id,
+          aozoraCardUrl: cardUrl,
+        );
+        break;
       case _NovelMenuAction.episodes:
         context.push(_detailLocation());
         break;

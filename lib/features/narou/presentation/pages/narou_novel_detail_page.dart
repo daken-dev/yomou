@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,8 +9,9 @@ import 'package:yomou/features/narou/application/narou_novel_detail_controller.d
 import 'package:yomou/features/navigation/presentation/widgets/app_scaffold.dart';
 import 'package:yomou/features/novels/domain/entities/novel_site.dart';
 import 'package:yomou/features/novels/domain/entities/novel_summary.dart';
+import 'package:yomou/features/novels/presentation/external_novel_page_launcher.dart';
 
-enum _DetailMenuAction { refresh, remove }
+enum _DetailMenuAction { openWorkPage, refresh, remove }
 
 class NarouNovelDetailPage extends ConsumerWidget {
   const NarouNovelDetailPage({super.key, required this.novelId});
@@ -64,6 +67,16 @@ class NarouNovelDetailPage extends ConsumerWidget {
   ) {
     final colorScheme = Theme.of(context).colorScheme;
     return <PopupMenuEntry<_DetailMenuAction>>[
+      const PopupMenuItem(
+        value: _DetailMenuAction.openWorkPage,
+        child: ListTile(
+          leading: Icon(Icons.open_in_new_rounded),
+          title: Text('作品ページを開く'),
+          dense: true,
+          contentPadding: EdgeInsets.zero,
+        ),
+      ),
+      if (savedNovel != null) const PopupMenuDivider(),
       if (savedNovel != null)
         const PopupMenuItem(
           value: _DetailMenuAction.refresh,
@@ -105,6 +118,11 @@ class NarouNovelDetailPage extends ConsumerWidget {
     final scheduler = ref.read(downloadSchedulerProvider);
 
     switch (action) {
+      case _DetailMenuAction.openWorkPage:
+        unawaited(
+          openWorkPageInExternalBrowser(context, NovelSite.narou, novelId),
+        );
+        break;
       case _DetailMenuAction.refresh:
         if (savedNovel == null) {
           return;
