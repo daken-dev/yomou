@@ -260,20 +260,7 @@ class HamelnWebClient {
   Future<Document> _fetchDocument(String url) async {
     final response = await _dio.get<String>(
       url,
-      options: Options(
-        responseType: ResponseType.plain,
-        headers: const <String, Object>{
-          'User-Agent':
-              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
-              '(KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
-          'Accept':
-              'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'Accept-Language': 'ja,en-US;q=0.9,en;q=0.8',
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache',
-          'Upgrade-Insecure-Requests': '1',
-        },
-      ),
+      options: Options(responseType: ResponseType.plain),
     );
     final html = response.data;
     if (html == null || html.isEmpty) {
