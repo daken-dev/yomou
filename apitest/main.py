@@ -1,5 +1,6 @@
 import argparse
 
+from hameln import parse_search_page as parse_hameln_search_page
 from kakuyomu import (
     parse_episode_page as parse_kakuyomu_episode_page,
     parse_search_page as parse_kakuyomu_search_page,
@@ -11,7 +12,7 @@ from narou.parser_common import print_json
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("site", nargs="?", default="narou", choices=["narou", "kakuyomu"])
+    parser.add_argument("site", nargs="?", default="narou", choices=["narou", "kakuyomu", "hameln"])
     parser.add_argument("page_type", choices=["info", "search", "toc", "episode"])
     parser.add_argument("url")
     args = parser.parse_args()
@@ -25,7 +26,7 @@ def main() -> None:
             data = parse_episode_page(args.url)
         else:
             raise ValueError("Narou parser does not support search page parsing.")
-    else:
+    elif args.site == "kakuyomu":
         if args.page_type == "search":
             data = parse_kakuyomu_search_page(args.url)
         elif args.page_type == "toc":
@@ -34,6 +35,11 @@ def main() -> None:
             data = parse_kakuyomu_episode_page(args.url)
         else:
             raise ValueError("Kakuyomu parser does not support info page parsing.")
+    else:
+        if args.page_type == "search":
+            data = parse_hameln_search_page(args.url)
+        else:
+            raise ValueError("Hameln parser currently supports only search page parsing.")
 
     print_json(data)
 
