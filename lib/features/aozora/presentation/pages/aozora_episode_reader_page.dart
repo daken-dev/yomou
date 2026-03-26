@@ -108,89 +108,93 @@ class _AozoraEpisodeReaderPageState
     );
     return Scaffold(
       backgroundColor: readerTheme.paperColor,
-      body: episodeAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(child: Text('本文取得失敗: $error')),
-        data: (data) {
-          final imageLoader = _imageLoaderFor(data.images);
-          final document = _documentFor(data);
+      body: Focus(
+        autofocus: true,
+        onKeyEvent: _handleKeyEvent,
+        child: episodeAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) => Center(child: Text('本文取得失敗: $error')),
+          data: (data) {
+            final imageLoader = _imageLoaderFor(data.images);
+            final document = _documentFor(data);
 
-          return Stack(
-            children: [
-              Positioned.fill(
-                child: KumihanCanvas(
-                  controller: _controller,
-                  document: document,
-                  imageLoader: imageLoader,
-                  initialSpread: desiredSpreadMode,
-                  initialWritingMode: readerSettings.writingMode.kumihanValue,
-                  layout: readerSettings.buildLayout(
-                    notchPadding: MediaQuery.viewPaddingOf(context).top,
+            return Stack(
+              children: [
+                Positioned.fill(
+                  child: KumihanCanvas(
+                    controller: _controller,
+                    document: document,
+                    imageLoader: imageLoader,
+                    initialSpread: desiredSpreadMode,
+                    initialWritingMode: readerSettings.writingMode.kumihanValue,
+                    layout: readerSettings.buildLayout(
+                      notchPadding: MediaQuery.viewPaddingOf(context).top,
+                    ),
+                    theme: readerTheme,
+                    onExternalOpen: (url) =>
+                        unawaited(openExternalUrlInBrowser(context, url)),
+                    tapHandler: _handleTap,
+                    onSnapshotChanged: (snapshot) =>
+                        _handleSnapshotChanged(snapshot: snapshot),
                   ),
-                  theme: readerTheme,
-                  onExternalOpen: (url) =>
-                      unawaited(openExternalUrlInBrowser(context, url)),
-                  tapHandler: _handleTap,
-                  onSnapshotChanged: (snapshot) =>
-                      _handleSnapshotChanged(snapshot: snapshot),
                 ),
-              ),
-              Positioned.fill(
-                child: IgnorePointer(
-                  ignoring: !_controlsVisible,
-                  child: AnimatedOpacity(
-                    duration: const Duration(milliseconds: 160),
-                    opacity: _controlsVisible ? 1 : 0,
-                    child: ColoredBox(
-                      color: Colors.black.withValues(alpha: 0.14),
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: _toggleControls,
-                        child: SafeArea(
-                          child: Align(
-                            alignment: Alignment.topCenter,
-                            child: Container(
-                              margin: const EdgeInsets.all(16),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 10,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.55),
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: Row(
-                                children: [
-                                  IconButton(
-                                    onPressed: () => context.pop(),
-                                    icon: const Icon(
-                                      Icons.arrow_back,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: Text(
-                                      data.author == null
-                                          ? data.title
-                                          : '${data.title} / ${data.author}',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
+                Positioned.fill(
+                  child: IgnorePointer(
+                    ignoring: !_controlsVisible,
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 160),
+                      opacity: _controlsVisible ? 1 : 0,
+                      child: ColoredBox(
+                        color: Colors.black.withValues(alpha: 0.14),
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: _toggleControls,
+                          child: SafeArea(
+                            child: Align(
+                              alignment: Alignment.topCenter,
+                              child: Container(
+                                margin: const EdgeInsets.all(16),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.55),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: Row(
+                                  children: [
+                                    IconButton(
+                                      onPressed: () => context.pop(),
+                                      icon: const Icon(
+                                        Icons.arrow_back,
                                         color: Colors.white,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
                                       ),
                                     ),
-                                  ),
-                                  IconButton(
-                                    onPressed: () =>
-                                        context.push('/settings/reader'),
-                                    icon: const Icon(
-                                      Icons.settings,
-                                      color: Colors.white,
+                                    Expanded(
+                                      child: Text(
+                                        data.author == null
+                                            ? data.title
+                                            : '${data.title} / ${data.author}',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                    IconButton(
+                                      onPressed: () =>
+                                          context.push('/settings/reader'),
+                                      icon: const Icon(
+                                        Icons.settings,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
@@ -199,12 +203,30 @@ class _AozoraEpisodeReaderPageState
                     ),
                   ),
                 ),
-              ),
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
     );
+  }
+
+  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent || _controlsVisible) {
+      return KeyEventResult.ignored;
+    }
+
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.keyA ||
+        key == LogicalKeyboardKey.arrowRight) {
+      unawaited(_turnPage(isForward: true));
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.keyD || key == LogicalKeyboardKey.arrowLeft) {
+      unawaited(_turnPage(isForward: false));
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
   }
 
   Future<void> _handleTap(
@@ -226,23 +248,39 @@ class _AozoraEpisodeReaderPageState
       return;
     }
 
-    final isForward = action == ReaderTapAction.forward;
-    final side = tapSideForDirection(
+    await _turnPage(
+      isForward: action == ReaderTapAction.forward,
       snapshot: details.snapshot,
-      isForward: isForward,
     );
+  }
+
+  Future<void> _turnPage({
+    required bool isForward,
+    KumihanSnapshot? snapshot,
+  }) async {
+    final effectiveSnapshot = snapshot ?? _controller.snapshot;
+    if (effectiveSnapshot.totalPages <= 0) {
+      return;
+    }
+
     final isEdge = isAtReaderTurnEdge(
-      snapshot: details.snapshot,
+      snapshot: effectiveSnapshot,
       isForward: isForward,
     );
     if (isForward && isEdge) {
-      _saveProgressNow(details.snapshot);
+      _saveProgressNow(effectiveSnapshot);
       if (mounted) {
         context.pop();
       }
       return;
     }
-    await actions.pageTurnFromSide(side, details.snapshot);
+
+    final amount = readerPageTurnAmount(effectiveSnapshot);
+    final currentPage = effectiveSnapshot.currentPage;
+    final targetPage = isForward
+        ? (currentPage + amount).clamp(0, effectiveSnapshot.totalPages - 1)
+        : (currentPage - amount).clamp(0, effectiveSnapshot.totalPages - 1);
+    await _controller.showPage(targetPage);
   }
 
   void _handleSnapshotChanged({required KumihanSnapshot snapshot}) {

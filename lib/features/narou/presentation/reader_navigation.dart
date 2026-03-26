@@ -10,7 +10,9 @@ ReaderTapAction resolveReaderTapAction({
 }) {
   return switch (pattern) {
     // 縦書き：左が進む・右が戻る
-    ReaderTapPattern.leftCenterRight => _resolveTapActionFromAxis(1 - normalizedX),
+    ReaderTapPattern.leftCenterRight => _resolveTapActionFromAxis(
+      1 - normalizedX,
+    ),
     ReaderTapPattern.topCenterBottom => _resolveTapActionFromAxis(normalizedY),
   };
 }
@@ -45,6 +47,13 @@ bool isAtReaderTurnEdge({
   };
   final lastTurnStart = (snapshot.totalPages - turnAmount).clamp(0, 1 << 30);
   return snapshot.currentPage >= lastTurnStart;
+}
+
+int readerPageTurnAmount(KumihanSnapshot snapshot) {
+  return switch (snapshot.spreadMode) {
+    KumihanSpreadMode.single => 1,
+    KumihanSpreadMode.doublePage => 2,
+  };
 }
 
 ReaderTapAction _resolveTapActionFromAxis(double value) {

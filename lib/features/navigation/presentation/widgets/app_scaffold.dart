@@ -19,6 +19,30 @@ class AppScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final canPop = context.canPop();
+    final isDesktopLayout = !canPop && MediaQuery.sizeOf(context).width >= 1100;
+    final bodyContent = SafeArea(
+      child: isDesktopLayout
+          ? Row(
+              children: [
+                SizedBox(
+                  width: 280,
+                  child: Material(
+                    color: Theme.of(context).colorScheme.surfaceContainerLow,
+                    child: const AppNavigationPane(),
+                  ),
+                ),
+                VerticalDivider(
+                  width: 1,
+                  thickness: 1,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.outlineVariant.withValues(alpha: 0.45),
+                ),
+                Expanded(child: _ConstrainedBody(child: body)),
+              ],
+            )
+          : _ConstrainedBody(child: body),
+    );
     return Scaffold(
       appBar: AppBar(
         leading: canPop
@@ -35,9 +59,26 @@ class AppScaffold extends StatelessWidget {
         title: Text(title),
         actions: actions,
       ),
-      drawer: canPop ? null : const AppDrawer(),
-      body: SafeArea(child: body),
+      drawer: canPop || isDesktopLayout ? null : const AppDrawer(),
+      body: bodyContent,
       floatingActionButton: floatingActionButton,
+    );
+  }
+}
+
+class _ConstrainedBody extends StatelessWidget {
+  const _ConstrainedBody({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1080),
+        child: child,
+      ),
     );
   }
 }

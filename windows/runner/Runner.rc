@@ -89,11 +89,11 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.example" "\0"
+            VALUE "CompanyName", "io.qzz.daken" "\0"
             VALUE "FileDescription", "よもう" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "よもう" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.example. All rights reserved." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 io.qzz.daken. All rights reserved." "\0"
             VALUE "OriginalFilename", "yomou.exe" "\0"
             VALUE "ProductName", "よもう" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"

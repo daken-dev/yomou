@@ -100,19 +100,41 @@ class _NarouEpisodeReaderPageState
 
     return Scaffold(
       backgroundColor: readerTheme.paperColor,
-      body: switch (episodeAsync) {
-        AsyncData(:final value) => _buildReader(
-          context,
-          data: value,
-          imageLoader: imageLoader,
-          snapshot: snapshot,
-          readerSettings: readerSettings,
-          readerTheme: readerTheme,
-        ),
-        AsyncError(:final error) => _buildError(context, error, request),
-        _ => const Center(child: CircularProgressIndicator()),
-      },
+      body: Focus(
+        autofocus: true,
+        onKeyEvent: _handleKeyEvent,
+        child: switch (episodeAsync) {
+          AsyncData(:final value) => _buildReader(
+            context,
+            data: value,
+            imageLoader: imageLoader,
+            snapshot: snapshot,
+            readerSettings: readerSettings,
+            readerTheme: readerTheme,
+          ),
+          AsyncError(:final error) => _buildError(context, error, request),
+          _ => const Center(child: CircularProgressIndicator()),
+        },
+      ),
     );
+  }
+
+  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent || _controlsVisible) {
+      return KeyEventResult.ignored;
+    }
+
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.keyA ||
+        key == LogicalKeyboardKey.arrowRight) {
+      unawaited(_turnPage(isForward: true));
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.keyD || key == LogicalKeyboardKey.arrowLeft) {
+      unawaited(_turnPage(isForward: false));
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
   }
 
   Widget _buildReader(
@@ -238,11 +260,10 @@ class _NarouEpisodeReaderPageState
                                 GestureDetector(
                                   onTap: snapshot.totalPages > 0
                                       ? () => _showPageJumpDialog(
-                                            context,
-                                            currentPage:
-                                                snapshot.currentPage + 1,
-                                            totalPages: snapshot.totalPages,
-                                          )
+                                          context,
+                                          currentPage: snapshot.currentPage + 1,
+                                          totalPages: snapshot.totalPages,
+                                        )
                                       : null,
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
@@ -250,8 +271,9 @@ class _NarouEpisodeReaderPageState
                                       vertical: 4,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: Colors.white
-                                          .withValues(alpha: 0.1),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.1,
+                                      ),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
@@ -319,8 +341,9 @@ class _NarouEpisodeReaderPageState
                                         vertical: 6,
                                       ),
                                       decoration: BoxDecoration(
-                                        color:
-                                            Colors.white.withValues(alpha: 0.1),
+                                        color: Colors.white.withValues(
+                                          alpha: 0.1,
+                                        ),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
@@ -430,11 +453,21 @@ class _NarouEpisodeReaderPageState
     KumihanTapActions actions, {
     required bool isForward,
   }) async {
+    await _turnPage(isForward: isForward, snapshot: details.snapshot);
+  }
+
+  Future<void> _turnPage({
+    required bool isForward,
+    KumihanSnapshot? snapshot,
+  }) async {
     final data = _latestData;
-    final snapshot = details.snapshot;
-    final side = tapSideForDirection(snapshot: snapshot, isForward: isForward);
+    final effectiveSnapshot = snapshot ?? _kumihanController.snapshot;
+    if (effectiveSnapshot.totalPages <= 0) {
+      return;
+    }
+
     final isAtEdge = isAtReaderTurnEdge(
-      snapshot: snapshot,
+      snapshot: effectiveSnapshot,
       isForward: isForward,
     );
 
@@ -461,7 +494,12 @@ class _NarouEpisodeReaderPageState
       }
     }
 
-    await actions.pageTurnFromSide(side, snapshot);
+    final amount = readerPageTurnAmount(effectiveSnapshot);
+    final currentPage = effectiveSnapshot.currentPage;
+    final targetPage = isForward
+        ? (currentPage + amount).clamp(0, effectiveSnapshot.totalPages - 1)
+        : (currentPage - amount).clamp(0, effectiveSnapshot.totalPages - 1);
+    await _kumihanController.showPage(targetPage);
   }
 
   void _openEpisode({
@@ -752,10 +790,7 @@ class _EpisodeReaderNumberInputDialogState
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('キャンセル'),
         ),
-        FilledButton(
-          onPressed: _submitIfValid,
-          child: const Text('移動'),
-        ),
+        FilledButton(onPressed: _submitIfValid, child: const Text('移動')),
       ],
     );
   }

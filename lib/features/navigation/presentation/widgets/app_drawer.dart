@@ -6,146 +6,155 @@ class AppDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return const Drawer(child: AppNavigationPane(closeOnNavigate: true));
+  }
+}
+
+class AppNavigationPane extends StatelessWidget {
+  const AppNavigationPane({super.key, this.closeOnNavigate = false});
+
+  final bool closeOnNavigate;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final currentLocation = GoRouterState.of(context).uri.toString();
 
-    return Drawer(
-      child: Column(
-        children: [
-          DrawerHeader(
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primaryContainer,
-            ),
-            child: SizedBox(
-              width: double.infinity,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Icon(
-                    Icons.menu_book_rounded,
-                    size: 40,
-                    color: theme.colorScheme.onPrimaryContainer,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'よもう',
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      color: theme.colorScheme.onPrimaryContainer,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.zero,
+    return Column(
+      children: [
+        DrawerHeader(
+          decoration: BoxDecoration(color: theme.colorScheme.primaryContainer),
+          child: SizedBox(
+            width: double.infinity,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                _DrawerItem(
-                  icon: Icons.home_outlined,
-                  selectedIcon: Icons.home,
-                  label: 'ホーム',
-                  location: '/',
-                  currentLocation: currentLocation,
-                  onTap: () => _go(context, '/'),
+                Icon(
+                  Icons.menu_book_rounded,
+                  size: 40,
+                  color: theme.colorScheme.onPrimaryContainer,
                 ),
-                const _SectionHeader(title: 'なろう'),
-                _DrawerItem(
-                  icon: Icons.trending_up_outlined,
-                  selectedIcon: Icons.trending_up,
-                  label: 'ランキング',
-                  location: '/narou/ranking',
-                  currentLocation: currentLocation,
-                  onTap: () => _go(context, '/narou/ranking'),
-                  indent: true,
-                ),
-                _DrawerItem(
-                  icon: Icons.search_outlined,
-                  selectedIcon: Icons.search,
-                  label: '検索',
-                  location: '/narou/search',
-                  currentLocation: currentLocation,
-                  onTap: () => _go(context, '/narou/search'),
-                  indent: true,
-                ),
-                const _SectionHeader(title: 'なろうR18'),
-                _DrawerItem(
-                  icon: Icons.trending_up_outlined,
-                  selectedIcon: Icons.trending_up,
-                  label: 'ランキング',
-                  location: '/narou-r18/ranking',
-                  currentLocation: currentLocation,
-                  onTap: () => _go(context, '/narou-r18/ranking'),
-                  indent: true,
-                ),
-                _DrawerItem(
-                  icon: Icons.search_outlined,
-                  selectedIcon: Icons.search,
-                  label: '検索',
-                  location: '/narou-r18/search',
-                  currentLocation: currentLocation,
-                  onTap: () => _go(context, '/narou-r18/search'),
-                  indent: true,
-                ),
-                const _SectionHeader(title: 'カクヨム'),
-                _DrawerItem(
-                  icon: Icons.trending_up_outlined,
-                  selectedIcon: Icons.trending_up,
-                  label: 'ランキング',
-                  location: '/kakuyomu/ranking',
-                  currentLocation: currentLocation,
-                  onTap: () => _go(context, '/kakuyomu/ranking'),
-                  indent: true,
-                ),
-                _DrawerItem(
-                  icon: Icons.search_outlined,
-                  selectedIcon: Icons.search,
-                  label: '検索',
-                  location: '/kakuyomu/search',
-                  currentLocation: currentLocation,
-                  onTap: () => _go(context, '/kakuyomu/search'),
-                  indent: true,
-                ),
-                const _SectionHeader(title: '青空文庫'),
-                _DrawerItem(
-                  icon: Icons.menu_book_outlined,
-                  selectedIcon: Icons.menu_book,
-                  label: '検索',
-                  location: '/aozora/search',
-                  currentLocation: currentLocation,
-                  onTap: () => _go(context, '/aozora/search'),
-                  indent: true,
-                ),
-                const Divider(height: 1),
-                _DrawerItem(
-                  icon: Icons.download_outlined,
-                  selectedIcon: Icons.download,
-                  label: 'ダウンロード状況',
-                  location: '/downloads',
-                  currentLocation: currentLocation,
-                  onTap: () => _go(context, '/downloads'),
-                ),
-                _DrawerItem(
-                  icon: Icons.settings_outlined,
-                  selectedIcon: Icons.settings,
-                  label: '設定',
-                  location: '/settings',
-                  currentLocation: currentLocation,
-                  onTap: () => _go(context, '/settings'),
+                const SizedBox(height: 8),
+                Text(
+                  'よもう',
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    color: theme.colorScheme.onPrimaryContainer,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
           ),
-        ],
-      ),
+        ),
+        Expanded(
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              _DrawerItem(
+                icon: Icons.home_outlined,
+                selectedIcon: Icons.home,
+                label: 'ホーム',
+                location: '/',
+                currentLocation: currentLocation,
+                onTap: () => _go(context, '/'),
+              ),
+              const _SectionHeader(title: 'なろう'),
+              _DrawerItem(
+                icon: Icons.trending_up_outlined,
+                selectedIcon: Icons.trending_up,
+                label: 'ランキング',
+                location: '/narou/ranking',
+                currentLocation: currentLocation,
+                onTap: () => _go(context, '/narou/ranking'),
+                indent: true,
+              ),
+              _DrawerItem(
+                icon: Icons.search_outlined,
+                selectedIcon: Icons.search,
+                label: '検索',
+                location: '/narou/search',
+                currentLocation: currentLocation,
+                onTap: () => _go(context, '/narou/search'),
+                indent: true,
+              ),
+              const _SectionHeader(title: 'なろうR18'),
+              _DrawerItem(
+                icon: Icons.trending_up_outlined,
+                selectedIcon: Icons.trending_up,
+                label: 'ランキング',
+                location: '/narou-r18/ranking',
+                currentLocation: currentLocation,
+                onTap: () => _go(context, '/narou-r18/ranking'),
+                indent: true,
+              ),
+              _DrawerItem(
+                icon: Icons.search_outlined,
+                selectedIcon: Icons.search,
+                label: '検索',
+                location: '/narou-r18/search',
+                currentLocation: currentLocation,
+                onTap: () => _go(context, '/narou-r18/search'),
+                indent: true,
+              ),
+              const _SectionHeader(title: 'カクヨム'),
+              _DrawerItem(
+                icon: Icons.trending_up_outlined,
+                selectedIcon: Icons.trending_up,
+                label: 'ランキング',
+                location: '/kakuyomu/ranking',
+                currentLocation: currentLocation,
+                onTap: () => _go(context, '/kakuyomu/ranking'),
+                indent: true,
+              ),
+              _DrawerItem(
+                icon: Icons.search_outlined,
+                selectedIcon: Icons.search,
+                label: '検索',
+                location: '/kakuyomu/search',
+                currentLocation: currentLocation,
+                onTap: () => _go(context, '/kakuyomu/search'),
+                indent: true,
+              ),
+              const _SectionHeader(title: '青空文庫'),
+              _DrawerItem(
+                icon: Icons.menu_book_outlined,
+                selectedIcon: Icons.menu_book,
+                label: '検索',
+                location: '/aozora/search',
+                currentLocation: currentLocation,
+                onTap: () => _go(context, '/aozora/search'),
+                indent: true,
+              ),
+              const Divider(height: 1),
+              _DrawerItem(
+                icon: Icons.download_outlined,
+                selectedIcon: Icons.download,
+                label: 'ダウンロード状況',
+                location: '/downloads',
+                currentLocation: currentLocation,
+                onTap: () => _go(context, '/downloads'),
+              ),
+              _DrawerItem(
+                icon: Icons.settings_outlined,
+                selectedIcon: Icons.settings,
+                label: '設定',
+                location: '/settings',
+                currentLocation: currentLocation,
+                onTap: () => _go(context, '/settings'),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
   void _go(BuildContext context, String location) {
     final router = GoRouter.of(context);
-    Navigator.of(context).pop();
+    if (closeOnNavigate) {
+      Navigator.of(context).pop();
+    }
     router.go(location);
   }
 }

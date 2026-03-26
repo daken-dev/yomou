@@ -8,7 +8,7 @@
 PRODUCT_NAME = よもう
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.example.yomou
+PRODUCT_BUNDLE_IDENTIFIER = io.qzz.daken.yomou
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2026 com.example. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 io.qzz.daken. All rights reserved.
