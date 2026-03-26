@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -47,6 +48,8 @@ class _AozoraEpisodeReaderPageState
   _PendingRestorePosition? _pendingRestorePosition;
   KumihanSnapshot? _latestSnapshot;
   KumihanDocument? _cachedDocument;
+  Map<String, Uint8List>? _cachedImages;
+  Future<ui.Image?> Function(String)? _cachedImageLoader;
 
   @override
   void initState() {
@@ -109,7 +112,7 @@ class _AozoraEpisodeReaderPageState
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(child: Text('本文取得失敗: $error')),
         data: (data) {
-          final imageLoader = AozoraEpisodeImageLoader(data.images).loadImage;
+          final imageLoader = _imageLoaderFor(data.images);
           final document = _documentFor(data);
 
           return Stack(
@@ -363,6 +366,19 @@ class _AozoraEpisodeReaderPageState
         await _controller.toggleSpread();
       }
     });
+  }
+
+  Future<ui.Image?> Function(String) _imageLoaderFor(
+    Map<String, Uint8List> images,
+  ) {
+    if (_cachedImages == images && _cachedImageLoader != null) {
+      return _cachedImageLoader!;
+    }
+
+    final imageLoader = AozoraEpisodeImageLoader(images).loadImage;
+    _cachedImages = images;
+    _cachedImageLoader = imageLoader;
+    return imageLoader;
   }
 }
 
