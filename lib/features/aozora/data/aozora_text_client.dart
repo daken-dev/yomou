@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 import 'package:dio/dio.dart';
@@ -15,9 +16,7 @@ class AozoraTextClient {
       zipUrl,
       options: Options(
         responseType: ResponseType.bytes,
-        headers: const <String, Object>{
-          'Accept': 'application/zip,*/*',
-        },
+        headers: const <String, Object>{'Accept': 'application/zip,*/*'},
       ),
     );
 
@@ -35,7 +34,11 @@ class AozoraTextClient {
     final textBytes = textFile.content as List<int>;
     final decoded = _decodeText(textBytes);
     final normalized = AozoraTextNormalizer.stripIntroBlock(decoded);
-    return AozoraTextFile(fileName: textFile.name, text: normalized);
+    return AozoraTextFile(
+      fileName: textFile.name,
+      text: normalized,
+      images: _collectImages(archive),
+    );
   }
 
   String _decodeText(List<int> bytes) {
@@ -45,11 +48,66 @@ class AozoraTextClient {
       return Windows31JCodec().decode(bytes);
     }
   }
+
+  Map<String, Uint8List> _collectImages(Archive archive) {
+    final images = <String, Uint8List>{};
+    for (final file in archive.files) {
+      if (!file.isFile || !_isImageFile(file.name)) {
+        continue;
+      }
+      final bytes = _extractBytes(file);
+      if (bytes.isEmpty) {
+        continue;
+      }
+      final normalizedName = _normalizePath(file.name);
+      if (normalizedName.isEmpty) {
+        continue;
+      }
+      images.putIfAbsent(normalizedName, () => bytes);
+      final segments = normalizedName.split('/');
+      if (segments.isNotEmpty) {
+        images.putIfAbsent(segments.last, () => bytes);
+      }
+    }
+    return images;
+  }
+
+  bool _isImageFile(String fileName) {
+    final lower = fileName.toLowerCase();
+    return lower.endsWith('.jpg') ||
+        lower.endsWith('.jpeg') ||
+        lower.endsWith('.png') ||
+        lower.endsWith('.gif') ||
+        lower.endsWith('.webp') ||
+        lower.endsWith('.bmp');
+  }
+
+  Uint8List _extractBytes(ArchiveFile file) {
+    return file.content;
+  }
+
+  String _normalizePath(String value) {
+    final uriDecoded = Uri.decodeFull(value.trim());
+    final withoutQuery = uriDecoded.split('?').first.split('#').first;
+    var normalized = withoutQuery.replaceAll('\\', '/');
+    while (normalized.startsWith('./')) {
+      normalized = normalized.substring(2);
+    }
+    while (normalized.startsWith('/')) {
+      normalized = normalized.substring(1);
+    }
+    return normalized.toLowerCase();
+  }
 }
 
 class AozoraTextFile {
-  const AozoraTextFile({required this.fileName, required this.text});
+  const AozoraTextFile({
+    required this.fileName,
+    required this.text,
+    this.images = const <String, Uint8List>{},
+  });
 
   final String fileName;
   final String text;
+  final Map<String, Uint8List> images;
 }

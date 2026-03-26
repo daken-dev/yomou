@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:yomou/features/downloads/application/download_providers.dart';
 import 'package:yomou/features/novels/domain/entities/novel_site.dart';
@@ -20,6 +22,7 @@ final aozoraEpisodeReaderProvider = FutureProvider.autoDispose
           title: saved.title ?? request.fallbackTitle ?? request.novelId,
           author: request.fallbackAuthor,
           body: saved.body!,
+          images: const <String, Uint8List>{},
         );
       }
 
@@ -37,6 +40,7 @@ final aozoraEpisodeReaderProvider = FutureProvider.autoDispose
         title: detail?.title ?? request.fallbackTitle ?? request.novelId,
         author: detail?.author ?? request.fallbackAuthor,
         body: text.text,
+        images: text.images,
       );
     });
 
@@ -63,12 +67,8 @@ class AozoraEpisodeReaderRequest {
   }
 
   @override
-  int get hashCode => Object.hash(
-    novelId,
-    textZipUrl,
-    fallbackTitle,
-    fallbackAuthor,
-  );
+  int get hashCode =>
+      Object.hash(novelId, textZipUrl, fallbackTitle, fallbackAuthor);
 }
 
 class AozoraEpisodeReaderData {
@@ -76,6 +76,7 @@ class AozoraEpisodeReaderData {
     required this.novelId,
     required this.title,
     required this.body,
+    required this.images,
     this.author,
   });
 
@@ -83,4 +84,5 @@ class AozoraEpisodeReaderData {
   final String title;
   final String? author;
   final String body;
+  final Map<String, Uint8List> images;
 }

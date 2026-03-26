@@ -6,9 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kumihan/kumihan.dart';
 import 'package:yomou/features/aozora/application/aozora_episode_reader_controller.dart';
+import 'package:yomou/features/aozora/data/aozora_episode_image_loader.dart';
 import 'package:yomou/features/downloads/application/download_providers.dart';
 import 'package:yomou/features/downloads/data/download_store.dart';
-import 'package:yomou/features/narou/data/narou_episode_image_cache.dart';
 import 'package:yomou/features/narou/presentation/reader_navigation.dart';
 import 'package:yomou/features/novels/domain/entities/novel_site.dart';
 import 'package:yomou/features/novels/presentation/external_novel_page_launcher.dart';
@@ -103,14 +103,13 @@ class _AozoraEpisodeReaderPageState
       desiredSpreadMode: desiredSpreadMode,
       snapshot: snapshot,
     );
-    final imageLoader = ref.watch(narouEpisodeImageCacheProvider).loadImage;
-
     return Scaffold(
       backgroundColor: readerTheme.paperColor,
       body: episodeAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(child: Text('本文取得失敗: $error')),
         data: (data) {
+          final imageLoader = AozoraEpisodeImageLoader(data.images).loadImage;
           final document = _documentFor(data);
 
           return Stack(
