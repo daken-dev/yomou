@@ -6,58 +6,111 @@ import 'package:yomou/features/novels/domain/entities/novel_site.dart';
 import 'package:yomou/features/novelup/data/novelup_web_client.dart';
 
 final narouEpisodeReaderProvider = FutureProvider.autoDispose
-    .family<NarouEpisodeReaderData, NarouEpisodeReaderRequest>((
-      ref,
-      request,
-    ) async {
-      final page = switch (request.site) {
-        NovelSite.kakuyomu =>
-          await ref
-              .watch(kakuyomuWebClientProvider)
-              .fetchEpisodePage(
-                request.novelId,
-                request.episodeNo,
-                url: request.episodeUrl,
-              ),
-        NovelSite.novelup =>
-          await ref
-              .watch(novelupWebClientProvider)
-              .fetchEpisodePage(
-                request.novelId,
-                request.episodeNo,
-                url: request.episodeUrl,
-              ),
-        NovelSite.hameln =>
-          await ref
-              .watch(hamelnWebClientProvider)
-              .fetchEpisodePage(
-                request.novelId,
-                request.episodeNo,
-                url: request.episodeUrl,
-              ),
-        _ =>
-          await ref
-              .watch(narouWebClientProvider)
-              .fetchEpisodePage(
-                request.novelId,
-                request.episodeNo,
-                site: request.site,
-                url: request.episodeUrl,
-              ),
-      };
+    .family<NarouEpisodeReaderData, NarouEpisodeReaderRequest>(
+      (ref, request) => fetchNarouEpisodeReaderData(ref, request),
+    );
 
-      return NarouEpisodeReaderData(
-        page: page,
-        previousEpisodeNo:
-            request.site == NovelSite.novelup
-            ? _previousEpisodeNo(page)
-            : extractEpisodeNumber(page.prevUrl) ?? _previousEpisodeNo(page),
-        nextEpisodeNo:
-            request.site == NovelSite.novelup
-            ? _nextEpisodeNo(page)
-            : extractEpisodeNumber(page.nextUrl) ?? _nextEpisodeNo(page),
-      );
-    });
+Future<NarouEpisodeReaderData> fetchNarouEpisodeReaderData(
+  Ref ref,
+  NarouEpisodeReaderRequest request,
+) async {
+  final page = switch (request.site) {
+    NovelSite.kakuyomu =>
+      await ref
+          .read(kakuyomuWebClientProvider)
+          .fetchEpisodePage(
+            request.novelId,
+            request.episodeNo,
+            url: request.episodeUrl,
+          ),
+    NovelSite.novelup =>
+      await ref
+          .read(novelupWebClientProvider)
+          .fetchEpisodePage(
+            request.novelId,
+            request.episodeNo,
+            url: request.episodeUrl,
+          ),
+    NovelSite.hameln =>
+      await ref
+          .read(hamelnWebClientProvider)
+          .fetchEpisodePage(
+            request.novelId,
+            request.episodeNo,
+            url: request.episodeUrl,
+          ),
+    _ =>
+      await ref
+          .read(narouWebClientProvider)
+          .fetchEpisodePage(
+            request.novelId,
+            request.episodeNo,
+            site: request.site,
+            url: request.episodeUrl,
+          ),
+  };
+
+  return NarouEpisodeReaderData(
+    page: page,
+    previousEpisodeNo: request.site == NovelSite.novelup
+        ? _previousEpisodeNo(page)
+        : extractEpisodeNumber(page.prevUrl) ?? _previousEpisodeNo(page),
+    nextEpisodeNo: request.site == NovelSite.novelup
+        ? _nextEpisodeNo(page)
+        : extractEpisodeNumber(page.nextUrl) ?? _nextEpisodeNo(page),
+  );
+}
+
+Future<NarouEpisodeReaderData> fetchNarouEpisodeReaderDataWithWidgetRef(
+  WidgetRef ref,
+  NarouEpisodeReaderRequest request,
+) async {
+  final page = switch (request.site) {
+    NovelSite.kakuyomu =>
+      await ref
+          .read(kakuyomuWebClientProvider)
+          .fetchEpisodePage(
+            request.novelId,
+            request.episodeNo,
+            url: request.episodeUrl,
+          ),
+    NovelSite.novelup =>
+      await ref
+          .read(novelupWebClientProvider)
+          .fetchEpisodePage(
+            request.novelId,
+            request.episodeNo,
+            url: request.episodeUrl,
+          ),
+    NovelSite.hameln =>
+      await ref
+          .read(hamelnWebClientProvider)
+          .fetchEpisodePage(
+            request.novelId,
+            request.episodeNo,
+            url: request.episodeUrl,
+          ),
+    _ =>
+      await ref
+          .read(narouWebClientProvider)
+          .fetchEpisodePage(
+            request.novelId,
+            request.episodeNo,
+            site: request.site,
+            url: request.episodeUrl,
+          ),
+  };
+
+  return NarouEpisodeReaderData(
+    page: page,
+    previousEpisodeNo: request.site == NovelSite.novelup
+        ? _previousEpisodeNo(page)
+        : extractEpisodeNumber(page.prevUrl) ?? _previousEpisodeNo(page),
+    nextEpisodeNo: request.site == NovelSite.novelup
+        ? _nextEpisodeNo(page)
+        : extractEpisodeNumber(page.nextUrl) ?? _nextEpisodeNo(page),
+  );
+}
 
 class NarouEpisodeReaderRequest {
   const NarouEpisodeReaderRequest({

@@ -41,6 +41,8 @@ class NarouEpisodeReaderPage extends ConsumerStatefulWidget {
 
 class _NarouEpisodeReaderPageState
     extends ConsumerState<NarouEpisodeReaderPage> {
+  static const int _prefetchRemainingPagesThreshold = 4;
+
   final KumihanController _kumihanController = KumihanController();
 
   late int _currentEpisodeNo;
@@ -52,6 +54,12 @@ class _NarouEpisodeReaderPageState
   Timer? _saveProgressDebounce;
   String? _documentConfigKey;
   KumihanDocument? _cachedDocument;
+  NarouEpisodeReaderData? _currentEpisodeOverride;
+  Future<NarouEpisodeReaderData>? _currentEpisodeOverrideFuture;
+  NarouEpisodeReaderRequest? _prefetchRequest;
+  Future<NarouEpisodeReaderData>? _prefetchFuture;
+  NarouEpisodeReaderData? _prefetchedEpisodeData;
+  Object? _prefetchToken;
 
   @override
   void initState() {
@@ -73,6 +81,8 @@ class _NarouEpisodeReaderPageState
   @override
   void dispose() {
     _saveProgressDebounce?.cancel();
+    _clearCurrentEpisodeOverride();
+    _clearPrefetchState();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
   }
@@ -85,7 +95,11 @@ class _NarouEpisodeReaderPageState
       episodeNo: _currentEpisodeNo,
       episodeUrl: _currentEpisodeUrl,
     );
-    final episodeAsync = ref.watch(narouEpisodeReaderProvider(request));
+    final episodeAsync = _currentEpisodeOverride != null
+        ? AsyncData<NarouEpisodeReaderData>(_currentEpisodeOverride!)
+        : _currentEpisodeOverrideFuture == null
+        ? ref.watch(narouEpisodeReaderProvider(request))
+        : null;
     final appSettingsAsync = ref.watch(appSettingsProvider);
     final appSettings = switch (appSettingsAsync) {
       AsyncData(:final value) => value,
@@ -103,18 +117,52 @@ class _NarouEpisodeReaderPageState
       body: Focus(
         autofocus: true,
         onKeyEvent: _handleKeyEvent,
-        child: switch (episodeAsync) {
-          AsyncData(:final value) => _buildReader(
-            context,
-            data: value,
-            imageLoader: imageLoader,
-            snapshot: snapshot,
-            readerSettings: readerSettings,
-            readerTheme: readerTheme,
-          ),
-          AsyncError(:final error) => _buildError(context, error, request),
-          _ => const Center(child: CircularProgressIndicator()),
-        },
+        child: episodeAsync != null
+            ? switch (episodeAsync) {
+                AsyncData(:final value) => _buildReader(
+                  context,
+                  data: value,
+                  imageLoader: imageLoader,
+                  snapshot: snapshot,
+                  readerSettings: readerSettings,
+                  readerTheme: readerTheme,
+                ),
+                AsyncError(:final error) => _buildError(
+                  context,
+                  error,
+                  request,
+                ),
+                _ => const Center(child: CircularProgressIndicator()),
+              }
+            : FutureBuilder<NarouEpisodeReaderData>(
+                future: _currentEpisodeOverrideFuture,
+                builder: (context, futureSnapshot) {
+                  if (futureSnapshot.hasData) {
+                    return _buildReader(
+                      context,
+                      data: futureSnapshot.data!,
+                      imageLoader: imageLoader,
+                      snapshot: snapshot,
+                      readerSettings: readerSettings,
+                      readerTheme: readerTheme,
+                    );
+                  }
+                  if (futureSnapshot.hasError) {
+                    return _buildError(
+                      context,
+                      futureSnapshot.error!,
+                      request,
+                      onRetry: () {
+                        setState(() {
+                          _clearCurrentEpisodeOverride();
+                        });
+                        ref.invalidate(narouEpisodeReaderProvider(request));
+                      },
+                    );
+                  }
+                  return const Center(child: CircularProgressIndicator());
+                },
+              ),
       ),
     );
   }
@@ -149,8 +197,7 @@ class _NarouEpisodeReaderPageState
     final isDarkReader = readerTheme.paperColor.computeLuminance() < 0.5;
     final overlayBase = isDarkReader ? Colors.white : Colors.black;
     final overlayFg = isDarkReader ? Colors.black : Colors.white;
-    final overlayFgDim =
-        isDarkReader ? Colors.black54 : Colors.white70;
+    final overlayFgDim = isDarkReader ? Colors.black54 : Colors.white70;
     final document = _documentFor(data: data, readerSettings: readerSettings);
     final isLandscape =
         MediaQuery.orientationOf(context) == Orientation.landscape;
@@ -276,9 +323,7 @@ class _NarouEpisodeReaderPageState
                                       vertical: 4,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: overlayFg.withValues(
-                                        alpha: 0.1,
-                                      ),
+                                      color: overlayFg.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
@@ -294,10 +339,7 @@ class _NarouEpisodeReaderPageState
                                 IconButton(
                                   onPressed: () =>
                                       context.push('/settings/reader'),
-                                  icon: Icon(
-                                    Icons.settings,
-                                    color: overlayFg,
-                                  ),
+                                  icon: Icon(Icons.settings, color: overlayFg),
                                   tooltip: 'リーダー設定',
                                 ),
                               ],
@@ -349,9 +391,7 @@ class _NarouEpisodeReaderPageState
                                         vertical: 6,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: overlayFg.withValues(
-                                          alpha: 0.1,
-                                        ),
+                                        color: overlayFg.withValues(alpha: 0.1),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
@@ -401,8 +441,9 @@ class _NarouEpisodeReaderPageState
   Widget _buildError(
     BuildContext context,
     Object error,
-    NarouEpisodeReaderRequest request,
-  ) {
+    NarouEpisodeReaderRequest request, {
+    VoidCallback? onRetry,
+  }) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -417,8 +458,9 @@ class _NarouEpisodeReaderPageState
               spacing: 12,
               children: [
                 FilledButton(
-                  onPressed: () =>
-                      ref.invalidate(narouEpisodeReaderProvider(request)),
+                  onPressed:
+                      onRetry ??
+                      () => ref.invalidate(narouEpisodeReaderProvider(request)),
                   child: const Text('再試行'),
                 ),
                 TextButton(
@@ -519,6 +561,20 @@ class _NarouEpisodeReaderPageState
     required _EpisodeStartPosition startPosition,
   }) {
     _saveProgressDebounce?.cancel();
+    final nextRequest = NarouEpisodeReaderRequest(
+      site: widget.site,
+      novelId: widget.novelId,
+      episodeNo: episodeNo,
+      episodeUrl: episodeUrl,
+    );
+    final shouldUsePrefetchedEpisode = _prefetchRequest == nextRequest;
+    final currentOverride = shouldUsePrefetchedEpisode
+        ? _prefetchedEpisodeData
+        : null;
+    final currentOverrideFuture =
+        shouldUsePrefetchedEpisode && currentOverride == null
+        ? _prefetchFuture
+        : null;
     setState(() {
       _currentEpisodeNo = episodeNo;
       _currentEpisodeUrl = episodeUrl;
@@ -528,6 +584,9 @@ class _NarouEpisodeReaderPageState
       _pendingRestorePosition = null;
       _documentConfigKey = null;
       _cachedDocument = null;
+      _currentEpisodeOverride = currentOverride;
+      _currentEpisodeOverrideFuture = currentOverrideFuture;
+      _clearPrefetchState();
     });
     _applyFullscreenMode();
   }
@@ -636,7 +695,59 @@ class _NarouEpisodeReaderPageState
       }
     }
 
+    _maybePrefetchNextEpisode(data: data, snapshot: snapshot);
     _scheduleProgressSave(data: data, snapshot: snapshot);
+  }
+
+  void _maybePrefetchNextEpisode({
+    required NarouEpisodeReaderData data,
+    required KumihanSnapshot snapshot,
+  }) {
+    final nextEpisodeNo = data.nextEpisodeNo;
+    if (nextEpisodeNo == null) {
+      _clearPrefetchState();
+      return;
+    }
+
+    final remainingPages = snapshot.totalPages - snapshot.currentPage - 1;
+    if (remainingPages > _prefetchRemainingPagesThreshold) {
+      return;
+    }
+
+    final request = NarouEpisodeReaderRequest(
+      site: widget.site,
+      novelId: widget.novelId,
+      episodeNo: nextEpisodeNo,
+      episodeUrl: data.page.nextUrl,
+    );
+    if (_prefetchRequest == request) {
+      return;
+    }
+
+    _startPrefetch(request);
+  }
+
+  void _startPrefetch(NarouEpisodeReaderRequest request) {
+    final token = Object();
+    final future = fetchNarouEpisodeReaderDataWithWidgetRef(ref, request);
+    _prefetchToken = token;
+    _prefetchRequest = request;
+    _prefetchFuture = future;
+    _prefetchedEpisodeData = null;
+    future.then(
+      (data) {
+        if (!identical(_prefetchToken, token)) {
+          return;
+        }
+        _prefetchedEpisodeData = data;
+      },
+      onError: (_) {
+        if (!identical(_prefetchToken, token)) {
+          return;
+        }
+        _clearPrefetchState();
+      },
+    );
   }
 
   void _scheduleProgressSave({
@@ -735,6 +846,18 @@ class _NarouEpisodeReaderPageState
         await _kumihanController.toggleSpread();
       }
     });
+  }
+
+  void _clearCurrentEpisodeOverride() {
+    _currentEpisodeOverride = null;
+    _currentEpisodeOverrideFuture = null;
+  }
+
+  void _clearPrefetchState() {
+    _prefetchToken = null;
+    _prefetchRequest = null;
+    _prefetchFuture = null;
+    _prefetchedEpisodeData = null;
   }
 }
 
