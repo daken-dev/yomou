@@ -35,11 +35,20 @@ void main() {
         usePaperTexture: false,
         paperColorPreset: ReaderPaperColorPreset.dark,
         fontSize: 24,
-        paddingTop: 20,
-        paddingBottom: 24,
-        paddingLeft: 8,
-        paddingRight: 12,
+        topUiPaddingTop: 4,
+        topUiPaddingBottom: 8,
+        topUiPaddingLeft: 12,
+        topUiPaddingRight: 16,
+        bodyPaddingTop: 20,
+        bodyPaddingInner: 8,
+        bodyPaddingOuter: 12,
+        bodyPaddingBottom: 24,
+        bottomUiPaddingTop: 3,
+        bottomUiPaddingBottom: 5,
+        bottomUiPaddingLeft: 7,
+        bottomUiPaddingRight: 9,
         enableLandscapeDoublePage: false,
+        pageTurnAnimationEnabled: false,
         singlePagePosition: ReaderSinglePagePosition.right,
         avoidNotch: true,
         showPreface: false,
@@ -56,11 +65,20 @@ void main() {
     expect(settings.reader.usePaperTexture, isFalse);
     expect(settings.reader.paperColorPreset, ReaderPaperColorPreset.dark);
     expect(settings.reader.fontSize, 24);
-    expect(settings.reader.paddingTop, 20);
-    expect(settings.reader.paddingBottom, 24);
-    expect(settings.reader.paddingLeft, 8);
-    expect(settings.reader.paddingRight, 12);
+    expect(settings.reader.topUiPaddingTop, 4);
+    expect(settings.reader.topUiPaddingBottom, 8);
+    expect(settings.reader.topUiPaddingLeft, 12);
+    expect(settings.reader.topUiPaddingRight, 16);
+    expect(settings.reader.bodyPaddingTop, 20);
+    expect(settings.reader.bodyPaddingInner, 8);
+    expect(settings.reader.bodyPaddingOuter, 12);
+    expect(settings.reader.bodyPaddingBottom, 24);
+    expect(settings.reader.bottomUiPaddingTop, 3);
+    expect(settings.reader.bottomUiPaddingBottom, 5);
+    expect(settings.reader.bottomUiPaddingLeft, 7);
+    expect(settings.reader.bottomUiPaddingRight, 9);
     expect(settings.reader.enableLandscapeDoublePage, isFalse);
+    expect(settings.reader.pageTurnAnimationEnabled, isFalse);
     expect(settings.reader.singlePagePosition, ReaderSinglePagePosition.right);
     expect(settings.reader.avoidNotch, isTrue);
     expect(settings.reader.showPreface, isFalse);

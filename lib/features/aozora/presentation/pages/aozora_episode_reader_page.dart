@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kumihan/kumihan.dart';
+import 'package:kumihan/kumihan.dart' as kumi;
 import 'package:yomou/features/aozora/application/aozora_episode_reader_controller.dart';
 import 'package:yomou/features/aozora/data/aozora_episode_image_loader.dart';
 import 'package:yomou/features/downloads/application/download_providers.dart';
@@ -41,13 +41,13 @@ class AozoraEpisodeReaderPage extends ConsumerStatefulWidget {
 
 class _AozoraEpisodeReaderPageState
     extends ConsumerState<AozoraEpisodeReaderPage> {
-  final KumihanController _controller = KumihanController();
+  final kumi.KumihanController _controller = kumi.KumihanController();
   late final DownloadStore _downloadStore;
   Timer? _saveProgressDebounce;
   var _controlsVisible = false;
   _PendingRestorePosition? _pendingRestorePosition;
-  KumihanSnapshot? _latestSnapshot;
-  KumihanDocument? _cachedDocument;
+  kumi.KumihanSnapshot? _latestSnapshot;
+  kumi.Document? _cachedDocument;
   Map<String, Uint8List>? _cachedImages;
   Future<ui.Image?> Function(String)? _cachedImageLoader;
 
@@ -94,18 +94,11 @@ class _AozoraEpisodeReaderPageState
     final readerTheme = readerSettings.toKumihanTheme(
       paperTexture: const AssetImage('assets/paper_textures/03.jpg'),
     );
-    final snapshot = _controller.snapshot;
-    final isLandscape =
-        MediaQuery.orientationOf(context) == Orientation.landscape;
-    final desiredSpreadMode =
-        readerSettings.enableLandscapeDoublePage && isLandscape
-        ? KumihanSpreadMode.doublePage
-        : KumihanSpreadMode.single;
-    _syncReaderModes(
-      desiredWritingMode: readerSettings.writingMode.kumihanValue,
-      desiredSpreadMode: desiredSpreadMode,
-      snapshot: snapshot,
+    final desiredSpreadMode = _spreadModeFor(
+      context,
+      readerSettings: readerSettings,
     );
+
     return Scaffold(
       backgroundColor: readerTheme.paperColor,
       body: Focus(
@@ -117,92 +110,105 @@ class _AozoraEpisodeReaderPageState
           data: (data) {
             final imageLoader = _imageLoaderFor(data.images);
             final document = _documentFor(data);
+            final isDarkReader =
+                readerTheme.paperColor.computeLuminance() < 0.5;
+            final overlayBase = isDarkReader ? Colors.white : Colors.black;
+            final overlayFg = isDarkReader ? Colors.black : Colors.white;
 
             return Stack(
               children: [
                 Positioned.fill(
-                  child: KumihanCanvas(
+                  child: kumi.KumihanBook(
                     controller: _controller,
                     document: document,
                     imageLoader: imageLoader,
-                    initialSpread: desiredSpreadMode,
-                    initialWritingMode: readerSettings.writingMode.kumihanValue,
-                    layout: readerSettings.buildLayout(
+                    spreadMode: desiredSpreadMode,
+                    layout: readerSettings.buildBookLayout(
                       notchPadding: MediaQuery.viewPaddingOf(context).top,
                     ),
                     theme: readerTheme,
-                    onExternalOpen: (url) =>
+                    autoPageFlipDuration: const Duration(milliseconds: 320),
+                    pageTurnAnimationEnabled:
+                        readerSettings.pageTurnAnimationEnabled,
+                    onLinkTap: (url) =>
                         unawaited(openExternalUrlInBrowser(context, url)),
-                    tapHandler: _handleTap,
                     onSnapshotChanged: (snapshot) =>
                         _handleSnapshotChanged(snapshot: snapshot),
+                    tapActionResolver: (width, height, x, y) =>
+                        _resolveTapAction(
+                          pattern: readerSettings.tapPattern,
+                          width: width,
+                          height: height,
+                          x: x,
+                          y: y,
+                        ),
                   ),
                 ),
-                Builder(builder: (context) {
-                  final isDarkReader =
-                      readerTheme.paperColor.computeLuminance() < 0.5;
-                  final overlayBase =
-                      isDarkReader ? Colors.white : Colors.black;
-                  final overlayFg =
-                      isDarkReader ? Colors.black : Colors.white;
-                  return Positioned.fill(
-                    child: IgnorePointer(
-                      ignoring: !_controlsVisible,
-                      child: AnimatedOpacity(
-                        duration: const Duration(milliseconds: 160),
-                        opacity: _controlsVisible ? 1 : 0,
-                        child: ColoredBox(
-                          color: overlayBase.withValues(alpha: 0.14),
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTap: _toggleControls,
-                            child: SafeArea(
-                              child: Align(
-                                alignment: Alignment.topCenter,
-                                child: Container(
-                                  margin: const EdgeInsets.all(16),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 10,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color:
-                                        overlayBase.withValues(alpha: 0.55),
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      IconButton(
-                                        onPressed: () => context.pop(),
-                                        icon: Icon(
-                                          Icons.arrow_back,
+                Positioned.fill(
+                  child: IgnorePointer(
+                    ignoring: _controlsVisible,
+                    child: _ReaderCenterTapRegion(
+                      pattern: readerSettings.tapPattern,
+                      onTap: _toggleControls,
+                    ),
+                  ),
+                ),
+                Positioned.fill(
+                  child: IgnorePointer(
+                    ignoring: !_controlsVisible,
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 160),
+                      opacity: _controlsVisible ? 1 : 0,
+                      child: ColoredBox(
+                        color: overlayBase.withValues(alpha: 0.14),
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: _toggleControls,
+                          child: SafeArea(
+                            child: Align(
+                              alignment: Alignment.topCenter,
+                              child: Container(
+                                margin: const EdgeInsets.all(16),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: overlayBase.withValues(alpha: 0.55),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: Row(
+                                  children: [
+                                    IconButton(
+                                      onPressed: () => context.pop(),
+                                      icon: Icon(
+                                        Icons.arrow_back,
+                                        color: overlayFg,
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Text(
+                                        data.author == null
+                                            ? data.title
+                                            : '${data.title} / ${data.author}',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
                                           color: overlayFg,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
                                         ),
                                       ),
-                                      Expanded(
-                                        child: Text(
-                                          data.author == null
-                                              ? data.title
-                                              : '${data.title} / ${data.author}',
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            color: overlayFg,
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
+                                    ),
+                                    IconButton(
+                                      onPressed: () =>
+                                          context.push('/settings/reader'),
+                                      icon: Icon(
+                                        Icons.settings,
+                                        color: overlayFg,
                                       ),
-                                      IconButton(
-                                        onPressed: () =>
-                                            context.push('/settings/reader'),
-                                        icon: Icon(
-                                          Icons.settings,
-                                          color: overlayFg,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
@@ -210,8 +216,8 @@ class _AozoraEpisodeReaderPageState
                         ),
                       ),
                     ),
-                  );
-                }),
+                  ),
+                ),
               ],
             );
           },
@@ -238,42 +244,20 @@ class _AozoraEpisodeReaderPageState
     return KeyEventResult.ignored;
   }
 
-  Future<void> _handleTap(
-    KumihanTapDetails details,
-    KumihanTapActions actions,
-  ) async {
-    final appSettings = switch (ref.read(appSettingsProvider)) {
-      AsyncData(:final value) => value,
-      _ => const AppSettings.defaults(),
-    };
-
-    final action = resolveReaderTapAction(
-      pattern: appSettings.reader.tapPattern,
-      normalizedX: details.normalizedX,
-      normalizedY: details.normalizedY,
-    );
-    if (action == ReaderTapAction.toggleControls) {
-      _toggleControls();
-      return;
-    }
-
-    await _turnPage(
-      isForward: action == ReaderTapAction.forward,
-      snapshot: details.snapshot,
-    );
-  }
-
   Future<void> _turnPage({
     required bool isForward,
-    KumihanSnapshot? snapshot,
+    kumi.KumihanSnapshot? snapshot,
   }) async {
     final effectiveSnapshot = snapshot ?? _controller.snapshot;
     if (effectiveSnapshot.totalPages <= 0) {
       return;
     }
 
+    final amount = _pageTurnAmount();
     final isEdge = isAtReaderTurnEdge(
-      snapshot: effectiveSnapshot,
+      currentPage: effectiveSnapshot.currentPage,
+      totalPages: effectiveSnapshot.totalPages,
+      pageTurnAmount: amount,
       isForward: isForward,
     );
     if (isForward && isEdge) {
@@ -284,7 +268,6 @@ class _AozoraEpisodeReaderPageState
       return;
     }
 
-    final amount = readerPageTurnAmount(effectiveSnapshot);
     final currentPage = effectiveSnapshot.currentPage;
     final targetPage = isForward
         ? (currentPage + amount).clamp(0, effectiveSnapshot.totalPages - 1)
@@ -292,7 +275,7 @@ class _AozoraEpisodeReaderPageState
     await _controller.showPage(targetPage);
   }
 
-  void _handleSnapshotChanged({required KumihanSnapshot snapshot}) {
+  void _handleSnapshotChanged({required kumi.KumihanSnapshot snapshot}) {
     _latestSnapshot = snapshot;
     if (snapshot.totalPages <= 0) {
       return;
@@ -321,14 +304,14 @@ class _AozoraEpisodeReaderPageState
     _scheduleProgressSave(snapshot);
   }
 
-  void _scheduleProgressSave(KumihanSnapshot snapshot) {
+  void _scheduleProgressSave(kumi.KumihanSnapshot snapshot) {
     _saveProgressDebounce?.cancel();
     _saveProgressDebounce = Timer(const Duration(milliseconds: 250), () {
       _saveProgressNow(snapshot);
     });
   }
 
-  void _saveProgressNow(KumihanSnapshot snapshot) {
+  void _saveProgressNow(kumi.KumihanSnapshot snapshot) {
     unawaited(
       _downloadStore.saveReadingProgress(
         site: NovelSite.aozora,
@@ -376,11 +359,11 @@ class _AozoraEpisodeReaderPageState
     SystemChrome.setEnabledSystemUIMode(mode);
   }
 
-  KumihanDocument _documentFor(AozoraEpisodeReaderData data) {
+  kumi.Document _documentFor(AozoraEpisodeReaderData data) {
     if (_cachedDocument != null) {
       return _cachedDocument!;
     }
-    final document = KumihanAozoraParser(
+    final document = kumi.AozoraParser(
       title: data.title,
       author: data.author,
       headerTitle: data.author == null
@@ -389,30 +372,6 @@ class _AozoraEpisodeReaderPageState
     ).parse(data.body);
     _cachedDocument = document;
     return document;
-  }
-
-  void _syncReaderModes({
-    required KumihanWritingMode desiredWritingMode,
-    required KumihanSpreadMode desiredSpreadMode,
-    required KumihanSnapshot snapshot,
-  }) {
-    if (snapshot.writingMode == desiredWritingMode &&
-        snapshot.spreadMode == desiredSpreadMode) {
-      return;
-    }
-
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted) {
-        return;
-      }
-
-      if (_controller.snapshot.writingMode != desiredWritingMode) {
-        await _controller.toggleWritingMode();
-      }
-      if (_controller.snapshot.spreadMode != desiredSpreadMode) {
-        await _controller.toggleSpread();
-      }
-    });
   }
 
   Future<ui.Image?> Function(String) _imageLoaderFor(
@@ -426,6 +385,84 @@ class _AozoraEpisodeReaderPageState
     _cachedImages = images;
     _cachedImageLoader = imageLoader;
     return imageLoader;
+  }
+
+  int _pageTurnAmount() {
+    final appSettings = switch (ref.read(appSettingsProvider)) {
+      AsyncData(:final value) => value,
+      _ => const AppSettings.defaults(),
+    };
+    return _spreadModeFor(context, readerSettings: appSettings.reader) ==
+            kumi.KumihanSpreadMode.doublePage
+        ? 2
+        : 1;
+  }
+
+  kumi.KumihanSpreadMode _spreadModeFor(
+    BuildContext context, {
+    required ReaderSettings readerSettings,
+  }) {
+    final isLandscape =
+        MediaQuery.orientationOf(context) == Orientation.landscape;
+    return readerSettings.enableLandscapeDoublePage && isLandscape
+        ? kumi.KumihanSpreadMode.doublePage
+        : kumi.KumihanSpreadMode.single;
+  }
+
+  kumi.PageFlipTapAction? _resolveTapAction({
+    required ReaderTapPattern pattern,
+    required double width,
+    required double height,
+    required double x,
+    required double y,
+  }) {
+    final action = resolveReaderTapAction(
+      pattern: pattern,
+      normalizedX: width == 0 ? 0.5 : x / width,
+      normalizedY: height == 0 ? 0.5 : y / height,
+    );
+    return switch (action) {
+      ReaderTapAction.backward => kumi.PageFlipTapAction.back,
+      ReaderTapAction.forward => kumi.PageFlipTapAction.next,
+      ReaderTapAction.toggleControls => null,
+    };
+  }
+}
+
+class _ReaderCenterTapRegion extends StatelessWidget {
+  const _ReaderCenterTapRegion({required this.pattern, required this.onTap});
+
+  final ReaderTapPattern pattern;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return switch (pattern) {
+      ReaderTapPattern.leftCenterRight => Align(
+        alignment: Alignment.center,
+        child: FractionallySizedBox(
+          widthFactor: 1 / 3,
+          heightFactor: 1,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onTap,
+            child: const SizedBox.expand(),
+          ),
+        ),
+      ),
+      ReaderTapPattern.topCenterBottom => Align(
+        alignment: Alignment.center,
+        child: FractionallySizedBox(
+          widthFactor: 1,
+          heightFactor: 1 / 3,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onTap,
+            child: const SizedBox.expand(),
+          ),
+        ),
+      ),
+    };
   }
 }
 

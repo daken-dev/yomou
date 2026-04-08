@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kumihan/kumihan.dart';
+import 'package:kumihan/kumihan.dart' as kumi;
 import 'package:yomou/features/downloads/application/download_providers.dart';
 import 'package:yomou/features/narou/application/narou_episode_reader_controller.dart';
 import 'package:yomou/features/narou/data/narou_episode_image_cache.dart';
@@ -43,7 +43,7 @@ class _NarouEpisodeReaderPageState
     extends ConsumerState<NarouEpisodeReaderPage> {
   static const int _prefetchRemainingPagesThreshold = 4;
 
-  final KumihanController _kumihanController = KumihanController();
+  final kumi.KumihanController _kumihanController = kumi.KumihanController();
 
   late int _currentEpisodeNo;
   late String? _currentEpisodeUrl;
@@ -53,7 +53,7 @@ class _NarouEpisodeReaderPageState
   _PendingRestorePosition? _pendingRestorePosition;
   Timer? _saveProgressDebounce;
   String? _documentConfigKey;
-  KumihanDocument? _cachedDocument;
+  kumi.Document? _cachedDocument;
   NarouEpisodeReaderData? _currentEpisodeOverride;
   Future<NarouEpisodeReaderData>? _currentEpisodeOverrideFuture;
   NarouEpisodeReaderRequest? _prefetchRequest;
@@ -189,9 +189,9 @@ class _NarouEpisodeReaderPageState
     BuildContext context, {
     required NarouEpisodeReaderData data,
     required Future<ui.Image?> Function(String) imageLoader,
-    required KumihanSnapshot snapshot,
+    required kumi.KumihanSnapshot snapshot,
     required ReaderSettings readerSettings,
-    required KumihanThemeData readerTheme,
+    required kumi.KumihanThemeData readerTheme,
   }) {
     _latestData = data;
     final isDarkReader = readerTheme.paperColor.computeLuminance() < 0.5;
@@ -199,16 +199,9 @@ class _NarouEpisodeReaderPageState
     final overlayFg = isDarkReader ? Colors.black : Colors.white;
     final overlayFgDim = isDarkReader ? Colors.black54 : Colors.white70;
     final document = _documentFor(data: data, readerSettings: readerSettings);
-    final isLandscape =
-        MediaQuery.orientationOf(context) == Orientation.landscape;
-    final desiredSpreadMode =
-        readerSettings.enableLandscapeDoublePage && isLandscape
-        ? KumihanSpreadMode.doublePage
-        : KumihanSpreadMode.single;
-    _syncReaderModes(
-      desiredWritingMode: readerSettings.writingMode.kumihanValue,
-      desiredSpreadMode: desiredSpreadMode,
-      snapshot: snapshot,
+    final desiredSpreadMode = _spreadModeFor(
+      context,
+      readerSettings: readerSettings,
     );
 
     final pageTitle = data.page.title ?? '本文';
@@ -224,24 +217,41 @@ class _NarouEpisodeReaderPageState
     return Stack(
       children: [
         Positioned.fill(
-          child: KumihanCanvas(
+          child: kumi.KumihanBook(
             key: ValueKey<String>(
               '${widget.novelId}:$_currentEpisodeNo:${_currentEpisodeUrl ?? ''}',
             ),
             controller: _kumihanController,
             document: document,
             imageLoader: imageLoader,
-            initialSpread: desiredSpreadMode,
-            initialWritingMode: readerSettings.writingMode.kumihanValue,
-            layout: readerSettings.buildLayout(
+            baseUri: Uri.tryParse(data.page.url),
+            spreadMode: desiredSpreadMode,
+            layout: readerSettings.buildBookLayout(
               notchPadding: MediaQuery.viewPaddingOf(context).top,
             ),
             theme: readerTheme,
-            onExternalOpen: (url) =>
+            autoPageFlipDuration: const Duration(milliseconds: 320),
+            pageTurnAnimationEnabled: readerSettings.pageTurnAnimationEnabled,
+            onLinkTap: (url) =>
                 unawaited(openExternalUrlInBrowser(context, url)),
-            tapHandler: _handleTap,
+            tapActionResolver: (width, height, x, y) => _resolveTapAction(
+              pattern: readerSettings.tapPattern,
+              width: width,
+              height: height,
+              x: x,
+              y: y,
+            ),
             onSnapshotChanged: (snapshot) =>
                 _handleSnapshotChanged(data: data, snapshot: snapshot),
+          ),
+        ),
+        Positioned.fill(
+          child: IgnorePointer(
+            ignoring: _controlsVisible,
+            child: _ReaderCenterTapRegion(
+              pattern: readerSettings.tapPattern,
+              onTap: _toggleControls,
+            ),
           ),
         ),
         Positioned.fill(
@@ -475,43 +485,9 @@ class _NarouEpisodeReaderPageState
     );
   }
 
-  Future<void> _handleTap(
-    KumihanTapDetails details,
-    KumihanTapActions actions,
-  ) async {
-    final appSettings = switch (ref.read(appSettingsProvider)) {
-      AsyncData(:final value) => value,
-      _ => const AppSettings.defaults(),
-    };
-    final tapPattern = appSettings.reader.tapPattern;
-    final action = resolveReaderTapAction(
-      pattern: tapPattern,
-      normalizedX: details.normalizedX,
-      normalizedY: details.normalizedY,
-    );
-    if (action == ReaderTapAction.toggleControls) {
-      _toggleControls();
-      return;
-    }
-
-    await _handleDirectionalTap(
-      details,
-      actions,
-      isForward: action == ReaderTapAction.forward,
-    );
-  }
-
-  Future<void> _handleDirectionalTap(
-    KumihanTapDetails details,
-    KumihanTapActions actions, {
-    required bool isForward,
-  }) async {
-    await _turnPage(isForward: isForward, snapshot: details.snapshot);
-  }
-
   Future<void> _turnPage({
     required bool isForward,
-    KumihanSnapshot? snapshot,
+    kumi.KumihanSnapshot? snapshot,
   }) async {
     final data = _latestData;
     final effectiveSnapshot = snapshot ?? _kumihanController.snapshot;
@@ -519,8 +495,11 @@ class _NarouEpisodeReaderPageState
       return;
     }
 
+    final amount = _pageTurnAmount();
     final isAtEdge = isAtReaderTurnEdge(
-      snapshot: effectiveSnapshot,
+      currentPage: effectiveSnapshot.currentPage,
+      totalPages: effectiveSnapshot.totalPages,
+      pageTurnAmount: amount,
       isForward: isForward,
     );
 
@@ -547,7 +526,6 @@ class _NarouEpisodeReaderPageState
       }
     }
 
-    final amount = readerPageTurnAmount(effectiveSnapshot);
     final currentPage = effectiveSnapshot.currentPage;
     final targetPage = isForward
         ? (currentPage + amount).clamp(0, effectiveSnapshot.totalPages - 1)
@@ -655,7 +633,7 @@ class _NarouEpisodeReaderPageState
 
   void _handleSnapshotChanged({
     required NarouEpisodeReaderData data,
-    required KumihanSnapshot snapshot,
+    required kumi.KumihanSnapshot snapshot,
   }) {
     if (snapshot.totalPages <= 0) {
       return;
@@ -701,7 +679,7 @@ class _NarouEpisodeReaderPageState
 
   void _maybePrefetchNextEpisode({
     required NarouEpisodeReaderData data,
-    required KumihanSnapshot snapshot,
+    required kumi.KumihanSnapshot snapshot,
   }) {
     final nextEpisodeNo = data.nextEpisodeNo;
     if (nextEpisodeNo == null) {
@@ -752,7 +730,7 @@ class _NarouEpisodeReaderPageState
 
   void _scheduleProgressSave({
     required NarouEpisodeReaderData data,
-    required KumihanSnapshot snapshot,
+    required kumi.KumihanSnapshot snapshot,
   }) {
     _saveProgressDebounce?.cancel();
     final episodeNo = _currentEpisodeNo;
@@ -791,7 +769,7 @@ class _NarouEpisodeReaderPageState
     return restoredPage.clamp(1, currentPageCount);
   }
 
-  KumihanDocument _documentFor({
+  kumi.Document _documentFor({
     required NarouEpisodeReaderData data,
     required ReaderSettings readerSettings,
   }) {
@@ -824,28 +802,45 @@ class _NarouEpisodeReaderPageState
     return document;
   }
 
-  void _syncReaderModes({
-    required KumihanWritingMode desiredWritingMode,
-    required KumihanSpreadMode desiredSpreadMode,
-    required KumihanSnapshot snapshot,
+  int _pageTurnAmount() {
+    final appSettings = switch (ref.read(appSettingsProvider)) {
+      AsyncData(:final value) => value,
+      _ => const AppSettings.defaults(),
+    };
+    return _spreadModeFor(context, readerSettings: appSettings.reader) ==
+            kumi.KumihanSpreadMode.doublePage
+        ? 2
+        : 1;
+  }
+
+  kumi.KumihanSpreadMode _spreadModeFor(
+    BuildContext context, {
+    required ReaderSettings readerSettings,
   }) {
-    if (snapshot.writingMode == desiredWritingMode &&
-        snapshot.spreadMode == desiredSpreadMode) {
-      return;
-    }
+    final isLandscape =
+        MediaQuery.orientationOf(context) == Orientation.landscape;
+    return readerSettings.enableLandscapeDoublePage && isLandscape
+        ? kumi.KumihanSpreadMode.doublePage
+        : kumi.KumihanSpreadMode.single;
+  }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted) {
-        return;
-      }
-
-      if (_kumihanController.snapshot.writingMode != desiredWritingMode) {
-        await _kumihanController.toggleWritingMode();
-      }
-      if (_kumihanController.snapshot.spreadMode != desiredSpreadMode) {
-        await _kumihanController.toggleSpread();
-      }
-    });
+  kumi.PageFlipTapAction? _resolveTapAction({
+    required ReaderTapPattern pattern,
+    required double width,
+    required double height,
+    required double x,
+    required double y,
+  }) {
+    final action = resolveReaderTapAction(
+      pattern: pattern,
+      normalizedX: width == 0 ? 0.5 : x / width,
+      normalizedY: height == 0 ? 0.5 : y / height,
+    );
+    return switch (action) {
+      ReaderTapAction.backward => kumi.PageFlipTapAction.back,
+      ReaderTapAction.forward => kumi.PageFlipTapAction.next,
+      ReaderTapAction.toggleControls => null,
+    };
   }
 
   void _clearCurrentEpisodeOverride() {
@@ -862,6 +857,43 @@ class _NarouEpisodeReaderPageState
 }
 
 enum _EpisodeStartPosition { firstPage, lastPage }
+
+class _ReaderCenterTapRegion extends StatelessWidget {
+  const _ReaderCenterTapRegion({required this.pattern, required this.onTap});
+
+  final ReaderTapPattern pattern;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return switch (pattern) {
+      ReaderTapPattern.leftCenterRight => Align(
+        alignment: Alignment.center,
+        child: FractionallySizedBox(
+          widthFactor: 1 / 3,
+          heightFactor: 1,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onTap,
+            child: const SizedBox.expand(),
+          ),
+        ),
+      ),
+      ReaderTapPattern.topCenterBottom => Align(
+        alignment: Alignment.center,
+        child: FractionallySizedBox(
+          widthFactor: 1,
+          heightFactor: 1 / 3,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onTap,
+            child: const SizedBox.expand(),
+          ),
+        ),
+      ),
+    };
+  }
+}
 
 class _EpisodeReaderNumberInputDialog extends StatefulWidget {
   const _EpisodeReaderNumberInputDialog({

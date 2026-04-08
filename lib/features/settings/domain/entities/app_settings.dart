@@ -40,13 +40,6 @@ extension AppThemeModeX on AppThemeMode {
 enum ReaderWritingMode { vertical, horizontal }
 
 extension ReaderWritingModeX on ReaderWritingMode {
-  KumihanWritingMode get kumihanValue {
-    return switch (this) {
-      ReaderWritingMode.vertical => KumihanWritingMode.vertical,
-      ReaderWritingMode.horizontal => KumihanWritingMode.horizontal,
-    };
-  }
-
   String get storageValue {
     return switch (this) {
       ReaderWritingMode.vertical => 'vertical',
@@ -128,8 +121,7 @@ extension ReaderSinglePagePositionX on ReaderSinglePagePosition {
   KumihanSinglePageNumberPosition get kumihanValue {
     return switch (this) {
       ReaderSinglePagePosition.left => KumihanSinglePageNumberPosition.left,
-      ReaderSinglePagePosition.center =>
-        KumihanSinglePageNumberPosition.center,
+      ReaderSinglePagePosition.center => KumihanSinglePageNumberPosition.center,
       ReaderSinglePagePosition.right => KumihanSinglePageNumberPosition.right,
     };
   }
@@ -166,11 +158,20 @@ class ReaderSettings {
     required this.usePaperTexture,
     required this.paperColorPreset,
     required this.fontSize,
-    required this.paddingTop,
-    required this.paddingBottom,
-    required this.paddingLeft,
-    required this.paddingRight,
+    required this.topUiPaddingTop,
+    required this.topUiPaddingBottom,
+    required this.topUiPaddingLeft,
+    required this.topUiPaddingRight,
+    required this.bodyPaddingTop,
+    required this.bodyPaddingInner,
+    required this.bodyPaddingOuter,
+    required this.bodyPaddingBottom,
+    required this.bottomUiPaddingTop,
+    required this.bottomUiPaddingBottom,
+    required this.bottomUiPaddingLeft,
+    required this.bottomUiPaddingRight,
     required this.enableLandscapeDoublePage,
+    required this.pageTurnAnimationEnabled,
     required this.singlePagePosition,
     required this.avoidNotch,
     required this.showPreface,
@@ -183,11 +184,20 @@ class ReaderSettings {
       usePaperTexture = true,
       paperColorPreset = ReaderPaperColorPreset.washi,
       fontSize = 20,
-      paddingTop = 16,
-      paddingBottom = 16,
-      paddingLeft = 16,
-      paddingRight = 16,
+      topUiPaddingTop = 0,
+      topUiPaddingBottom = 0,
+      topUiPaddingLeft = 0,
+      topUiPaddingRight = 0,
+      bodyPaddingTop = 16,
+      bodyPaddingInner = 16,
+      bodyPaddingOuter = 16,
+      bodyPaddingBottom = 16,
+      bottomUiPaddingTop = 0,
+      bottomUiPaddingBottom = 0,
+      bottomUiPaddingLeft = 0,
+      bottomUiPaddingRight = 0,
       enableLandscapeDoublePage = true,
+      pageTurnAnimationEnabled = true,
       singlePagePosition = ReaderSinglePagePosition.center,
       avoidNotch = false,
       showPreface = true,
@@ -198,26 +208,55 @@ class ReaderSettings {
   final bool usePaperTexture;
   final ReaderPaperColorPreset paperColorPreset;
   final double fontSize;
-  final double paddingTop;
-  final double paddingBottom;
-  final double paddingLeft;
-  final double paddingRight;
+  final double topUiPaddingTop;
+  final double topUiPaddingBottom;
+  final double topUiPaddingLeft;
+  final double topUiPaddingRight;
+  final double bodyPaddingTop;
+  final double bodyPaddingInner;
+  final double bodyPaddingOuter;
+  final double bodyPaddingBottom;
+  final double bottomUiPaddingTop;
+  final double bottomUiPaddingBottom;
+  final double bottomUiPaddingLeft;
+  final double bottomUiPaddingRight;
   final bool enableLandscapeDoublePage;
+  final bool pageTurnAnimationEnabled;
   final ReaderSinglePagePosition singlePagePosition;
   final bool avoidNotch;
   final bool showPreface;
   final bool showAfterword;
 
-  KumihanLayoutData buildLayout({double notchPadding = 0}) {
-    final effectiveTop = paddingTop + (avoidNotch ? notchPadding : 0);
-    return KumihanLayoutData(
+  EdgeInsets get topUiPadding => EdgeInsets.fromLTRB(
+    topUiPaddingLeft,
+    topUiPaddingTop,
+    topUiPaddingRight,
+    topUiPaddingBottom,
+  );
+
+  EdgeInsets get bottomUiPadding => EdgeInsets.fromLTRB(
+    bottomUiPaddingLeft,
+    bottomUiPaddingTop,
+    bottomUiPaddingRight,
+    bottomUiPaddingBottom,
+  );
+
+  KumihanBookBodyPadding get bodyPadding => KumihanBookBodyPadding(
+    top: bodyPaddingTop,
+    inner: bodyPaddingInner,
+    outer: bodyPaddingOuter,
+    bottom: bodyPaddingBottom,
+  );
+
+  KumihanBookLayoutData buildBookLayout({double notchPadding = 0}) {
+    final effectiveTopUiPadding = topUiPadding.copyWith(
+      top: topUiPadding.top + (avoidNotch ? notchPadding : 0),
+    );
+    return KumihanBookLayoutData(
       fontSize: fontSize,
-      pagePadding: EdgeInsets.fromLTRB(
-        paddingLeft,
-        effectiveTop,
-        paddingRight,
-        paddingBottom,
-      ),
+      topUiPadding: effectiveTopUiPadding,
+      bodyPadding: bodyPadding,
+      bottomUiPadding: bottomUiPadding,
       singlePageNumberPosition: singlePagePosition.kumihanValue,
     );
   }
@@ -268,11 +307,20 @@ class ReaderSettings {
     bool? usePaperTexture,
     ReaderPaperColorPreset? paperColorPreset,
     double? fontSize,
-    double? paddingTop,
-    double? paddingBottom,
-    double? paddingLeft,
-    double? paddingRight,
+    double? topUiPaddingTop,
+    double? topUiPaddingBottom,
+    double? topUiPaddingLeft,
+    double? topUiPaddingRight,
+    double? bodyPaddingTop,
+    double? bodyPaddingInner,
+    double? bodyPaddingOuter,
+    double? bodyPaddingBottom,
+    double? bottomUiPaddingTop,
+    double? bottomUiPaddingBottom,
+    double? bottomUiPaddingLeft,
+    double? bottomUiPaddingRight,
     bool? enableLandscapeDoublePage,
+    bool? pageTurnAnimationEnabled,
     ReaderSinglePagePosition? singlePagePosition,
     bool? avoidNotch,
     bool? showPreface,
@@ -284,12 +332,23 @@ class ReaderSettings {
       usePaperTexture: usePaperTexture ?? this.usePaperTexture,
       paperColorPreset: paperColorPreset ?? this.paperColorPreset,
       fontSize: fontSize ?? this.fontSize,
-      paddingTop: paddingTop ?? this.paddingTop,
-      paddingBottom: paddingBottom ?? this.paddingBottom,
-      paddingLeft: paddingLeft ?? this.paddingLeft,
-      paddingRight: paddingRight ?? this.paddingRight,
+      topUiPaddingTop: topUiPaddingTop ?? this.topUiPaddingTop,
+      topUiPaddingBottom: topUiPaddingBottom ?? this.topUiPaddingBottom,
+      topUiPaddingLeft: topUiPaddingLeft ?? this.topUiPaddingLeft,
+      topUiPaddingRight: topUiPaddingRight ?? this.topUiPaddingRight,
+      bodyPaddingTop: bodyPaddingTop ?? this.bodyPaddingTop,
+      bodyPaddingInner: bodyPaddingInner ?? this.bodyPaddingInner,
+      bodyPaddingOuter: bodyPaddingOuter ?? this.bodyPaddingOuter,
+      bodyPaddingBottom: bodyPaddingBottom ?? this.bodyPaddingBottom,
+      bottomUiPaddingTop: bottomUiPaddingTop ?? this.bottomUiPaddingTop,
+      bottomUiPaddingBottom:
+          bottomUiPaddingBottom ?? this.bottomUiPaddingBottom,
+      bottomUiPaddingLeft: bottomUiPaddingLeft ?? this.bottomUiPaddingLeft,
+      bottomUiPaddingRight: bottomUiPaddingRight ?? this.bottomUiPaddingRight,
       enableLandscapeDoublePage:
           enableLandscapeDoublePage ?? this.enableLandscapeDoublePage,
+      pageTurnAnimationEnabled:
+          pageTurnAnimationEnabled ?? this.pageTurnAnimationEnabled,
       singlePagePosition: singlePagePosition ?? this.singlePagePosition,
       avoidNotch: avoidNotch ?? this.avoidNotch,
       showPreface: showPreface ?? this.showPreface,

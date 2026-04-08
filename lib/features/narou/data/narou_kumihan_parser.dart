@@ -1,61 +1,84 @@
-import 'package:html/dom.dart' as html;
-import 'package:html/parser.dart' as html_parser;
-import 'package:kumihan/kumihan.dart';
+import 'package:kumihan/kumihan.dart' as kumi;
 import 'package:yomou/features/downloads/data/narou_web_client.dart';
 import 'package:yomou/features/settings/domain/entities/app_settings.dart';
 
 class NarouKumihanParser {
   const NarouKumihanParser();
 
-  KumihanDocument parseEpisode(
+  kumi.Document parseEpisode(
     NarouEpisodePage page, {
     ReaderSettings settings = const ReaderSettings.defaults(),
   }) {
-    final blocks = <KumihanBlock>[];
+    final paragraphs = <List<kumi.AstToken>>[
+      ..._buildTitleHeader(page),
+      ..._buildSections(page, settings: settings),
+    ];
+
+    final normalizedParagraphs = _trimEdgeBlankParagraphs(
+      paragraphs.map(_normalizeParagraph).toList(growable: false),
+    );
+
+    if (normalizedParagraphs.isEmpty) {
+      normalizedParagraphs.add(<kumi.AstToken>[
+        const kumi.AstText('本文がありません。'),
+      ]);
+    }
+
+    return kumi.Document.fromAst(
+      _joinParagraphs(normalizedParagraphs),
+      headerTitle: _headerTitle(page),
+    );
+  }
+
+  List<List<kumi.AstToken>> _buildSections(
+    NarouEpisodePage page, {
+    required ReaderSettings settings,
+  }) {
+    final sections = <List<List<kumi.AstToken>>>[];
 
     if (settings.showPreface) {
-      _appendSection(
-        blocks,
+      final preface = _parseSectionParagraphs(
         htmlFragment: page.prefaceHtml,
         fallbackText: page.preface,
         baseUrl: page.url,
       );
+      if (preface.isNotEmpty) {
+        sections.add(preface);
+      }
     }
-    _appendSection(
-      blocks,
+
+    final body = _parseSectionParagraphs(
       htmlFragment: page.bodyHtml,
       fallbackText: page.body,
       baseUrl: page.url,
     );
+    if (body.isNotEmpty) {
+      sections.add(body);
+    }
+
     if (settings.showAfterword) {
-      _appendSection(
-        blocks,
+      final afterword = _parseSectionParagraphs(
         htmlFragment: page.afterwordHtml,
         fallbackText: page.afterword,
         baseUrl: page.url,
       );
+      if (afterword.isNotEmpty) {
+        sections.add(afterword);
+      }
     }
 
-    _trimTrailingBlankParagraphs(blocks);
-
-    if (blocks.isEmpty) {
-      blocks.add(
-        const KumihanParagraphBlock(
-          children: <KumihanInline>[KumihanTextInline('本文がありません。')],
-        ),
-      );
+    final paragraphs = <List<kumi.AstToken>>[];
+    for (var index = 0; index < sections.length; index += 1) {
+      if (index > 0) {
+        paragraphs.add(const <kumi.AstToken>[kumi.AstText('――――')]);
+      }
+      paragraphs.addAll(sections[index]);
     }
-
-    final headerBlocks = _buildTitleHeader(page);
-    if (headerBlocks.isNotEmpty) {
-      blocks.insertAll(0, headerBlocks);
-    }
-
-    return KumihanDocument(blocks: blocks, headerTitle: _headerTitle(page));
+    return paragraphs;
   }
 
-  List<KumihanBlock> _buildTitleHeader(NarouEpisodePage page) {
-    final blocks = <KumihanBlock>[];
+  List<List<kumi.AstToken>> _buildTitleHeader(NarouEpisodePage page) {
+    final paragraphs = <List<kumi.AstToken>>[];
     final isShortStory =
         page.sequenceTotal != null &&
         page.sequenceTotal == 1 &&
@@ -67,228 +90,230 @@ class NarouKumihanParser {
     final episodeTitle = (page.title ?? '').trim();
 
     if (isShortStory) {
-      // 短編: 作品タイトル + 作者名
       if (novelTitle.isNotEmpty) {
-        blocks.add(
-          KumihanParagraphBlock(
-            children: <KumihanInline>[
-              KumihanStyledInline(
-                children: <KumihanInline>[KumihanTextInline(novelTitle)],
-                style: '大見出し',
-              ),
-            ],
-          ),
+        paragraphs.add(
+          _headingParagraph(novelTitle, kumi.AstHeadingLevel.large),
         );
       }
       if (authorName.isNotEmpty) {
-        blocks.add(
-          const KumihanParagraphBlock(children: <KumihanInline>[]),
-        );
-        blocks.add(
-          KumihanParagraphBlock(
-            children: <KumihanInline>[KumihanTextInline(authorName)],
-          ),
-        );
+        paragraphs.add(const <kumi.AstToken>[]);
+        paragraphs.add(<kumi.AstToken>[kumi.AstText(authorName)]);
       }
     } else if (isFirstEpisode) {
-      // 連載1話目: 作品タイトル + 作者名 + エピソードタイトル
       if (novelTitle.isNotEmpty) {
-        blocks.add(
-          KumihanParagraphBlock(
-            children: <KumihanInline>[
-              KumihanStyledInline(
-                children: <KumihanInline>[KumihanTextInline(novelTitle)],
-                style: '大見出し',
-              ),
-            ],
-          ),
+        paragraphs.add(
+          _headingParagraph(novelTitle, kumi.AstHeadingLevel.large),
         );
       }
       if (authorName.isNotEmpty) {
-        blocks.add(
-          const KumihanParagraphBlock(children: <KumihanInline>[]),
-        );
-        blocks.add(
-          KumihanParagraphBlock(
-            children: <KumihanInline>[KumihanTextInline(authorName)],
-          ),
-        );
+        paragraphs.add(const <kumi.AstToken>[]);
+        paragraphs.add(<kumi.AstToken>[kumi.AstText(authorName)]);
       }
       if (episodeTitle.isNotEmpty) {
-        blocks.add(
-          const KumihanParagraphBlock(children: <KumihanInline>[]),
-        );
-        blocks.add(
-          KumihanParagraphBlock(
-            children: <KumihanInline>[
-              KumihanStyledInline(
-                children: <KumihanInline>[KumihanTextInline(episodeTitle)],
-                style: '中見出し',
-              ),
-            ],
-          ),
+        paragraphs.add(const <kumi.AstToken>[]);
+        paragraphs.add(
+          _headingParagraph(episodeTitle, kumi.AstHeadingLevel.medium),
         );
       }
-    } else {
-      // 連載2話目以降: エピソードタイトルのみ
-      if (episodeTitle.isNotEmpty) {
-        blocks.add(
-          KumihanParagraphBlock(
-            children: <KumihanInline>[
-              KumihanStyledInline(
-                children: <KumihanInline>[KumihanTextInline(episodeTitle)],
-                style: '中見出し',
-              ),
-            ],
-          ),
-        );
-      }
-    }
-
-    if (blocks.isNotEmpty) {
-      blocks.add(
-        const KumihanParagraphBlock(children: <KumihanInline>[]),
-      );
-      blocks.add(
-        const KumihanParagraphBlock(children: <KumihanInline>[]),
+    } else if (episodeTitle.isNotEmpty) {
+      paragraphs.add(
+        _headingParagraph(episodeTitle, kumi.AstHeadingLevel.medium),
       );
     }
 
-    return blocks;
+    if (paragraphs.isNotEmpty) {
+      paragraphs.add(const <kumi.AstToken>[]);
+      paragraphs.add(const <kumi.AstToken>[]);
+    }
+
+    return paragraphs;
   }
 
-  void _appendSection(
-    List<KumihanBlock> blocks, {
-    required String? htmlFragment,
-    required String? fallbackText,
-    required String baseUrl,
-  }) {
-    final sectionBlocks = _trimEdgeBlankParagraphs(
-      _parseSection(
-        htmlFragment: htmlFragment,
-        fallbackText: fallbackText,
-        baseUrl: baseUrl,
+  List<kumi.AstToken> _headingParagraph(
+    String text,
+    kumi.AstHeadingLevel level,
+  ) {
+    return <kumi.AstToken>[
+      kumi.AstHeading(
+        boundary: kumi.AstRangeBoundary.start,
+        form: kumi.AstHeadingForm.standalone,
+        level: level,
       ),
-    );
-    if (sectionBlocks.isEmpty) {
-      return;
-    }
-
-    if (blocks.isNotEmpty) {
-      _trimTrailingBlankParagraphs(blocks);
-      if (blocks.isNotEmpty) {
-        blocks.add(_dividerBlock());
-      }
-    }
-
-    blocks.addAll(sectionBlocks);
+      kumi.AstText(text),
+      kumi.AstHeading(
+        boundary: kumi.AstRangeBoundary.end,
+        form: kumi.AstHeadingForm.standalone,
+        level: level,
+      ),
+    ];
   }
 
-  List<KumihanBlock> _parseSection({
+  List<List<kumi.AstToken>> _parseSectionParagraphs({
     required String? htmlFragment,
     required String? fallbackText,
     required String baseUrl,
   }) {
     final normalizedHtml = htmlFragment?.trim() ?? '';
     if (normalizedHtml.isNotEmpty) {
-      final fragment = html_parser.parseFragment(
-        normalizedHtml,
-        container: 'div',
+      final document = const kumi.HtmlParser().parse(normalizedHtml);
+      return _trimEdgeBlankParagraphs(
+        _splitParagraphs(
+          _resolveUrlTokens(document.ast, baseUrl),
+        ).map(_normalizeParagraph).toList(growable: false),
       );
-      final context = _ParserContext(baseUrl: baseUrl);
-      return _normalizeBlocks(context.parseBlockChildren(fragment.nodes));
     }
 
     final normalizedText = fallbackText?.trim() ?? '';
     if (normalizedText.isEmpty) {
-      return const <KumihanBlock>[];
+      return const <List<kumi.AstToken>>[];
     }
 
-    return _normalizeBlocks(
+    return _trimEdgeBlankParagraphs(
       normalizedText
           .split('\n')
-          .map(
-            (line) => KumihanParagraphBlock(
-              children: line.isEmpty
-                  ? const <KumihanInline>[]
-                  : <KumihanInline>[KumihanTextInline(line)],
-            ),
-          )
+          .map(_plainParagraphFromText)
+          .map(_normalizeParagraph)
           .toList(growable: false),
     );
   }
 
-  List<KumihanBlock> _normalizeBlocks(List<KumihanBlock> blocks) {
-    return blocks.map(_normalizeBlock).toList(growable: false);
-  }
-
-  KumihanBlock _normalizeBlock(KumihanBlock block) {
-    if (block is! KumihanParagraphBlock) {
-      return block;
-    }
-
-    final children = _normalizeParagraphChildren(block.children);
-    if (_isBlankInlineList(children)) {
-      return KumihanParagraphBlock(
-        children: const <KumihanInline>[],
-        keepWithPrevious: block.keepWithPrevious,
-        leadingCommands: block.leadingCommands,
-      );
-    }
-    if (_isDividerParagraph(children)) {
-      return _dividerBlock();
-    }
-
-    return KumihanParagraphBlock(
-      children: children,
-      keepWithPrevious: block.keepWithPrevious,
-      leadingCommands: block.leadingCommands,
-    );
-  }
-
-  List<KumihanInline> _normalizeParagraphChildren(
-    List<KumihanInline> children,
+  List<kumi.AstToken> _resolveUrlTokens(
+    Iterable<kumi.AstToken> tokens,
+    String baseUrl,
   ) {
-    final normalized = <KumihanInline>[];
-    for (final child in children) {
-      normalized.addAll(_normalizeInline(child));
-    }
-    return normalized;
+    return tokens
+        .map((token) {
+          return switch (token) {
+            kumi.AstLink(boundary: final boundary, target: final target) =>
+              kumi.AstLink(
+                boundary: boundary,
+                target: absoluteUrl(target, baseUrl),
+              ),
+            kumi.AstImage(
+              description: final description,
+              fileName: final fileName,
+              size: final size,
+              hasCaption: final hasCaption,
+            ) =>
+              kumi.AstImage(
+                description: description,
+                fileName: absoluteUrl(fileName, baseUrl) ?? fileName,
+                size: size,
+                hasCaption: hasCaption,
+              ),
+            _ => token,
+          };
+        })
+        .toList(growable: false);
   }
 
-  List<KumihanInline> _normalizeInline(KumihanInline inline) {
-    switch (inline) {
-      case KumihanTextInline():
-        return _normalizeTextInline(inline.text);
-      case KumihanStyledInline():
-        return <KumihanInline>[
-          KumihanStyledInline(
-            children: _normalizeParagraphChildren(inline.children),
-            style: inline.style,
-          ),
-        ];
-      case KumihanLinkInline():
-        return <KumihanInline>[
-          KumihanLinkInline(
-            children: _normalizeParagraphChildren(inline.children),
-            target: inline.target,
-          ),
-        ];
-      case KumihanRubyInline():
-        return <KumihanInline>[
-          KumihanRubyInline(
-            children: _normalizeParagraphChildren(inline.children),
-            ruby: inline.ruby,
-            side: inline.side,
-          ),
-        ];
-      default:
-        return <KumihanInline>[inline];
+  List<List<kumi.AstToken>> _splitParagraphs(Iterable<kumi.AstToken> tokens) {
+    final paragraphs = <List<kumi.AstToken>>[];
+    var current = <kumi.AstToken>[];
+
+    for (final token in tokens) {
+      if (token is kumi.AstNewLine) {
+        paragraphs.add(current);
+        current = <kumi.AstToken>[];
+        continue;
+      }
+      current.add(token);
     }
+
+    paragraphs.add(current);
+    return paragraphs;
   }
 
-  List<KumihanInline> _normalizeTextInline(String text) {
-    final children = <KumihanInline>[];
+  List<kumi.AstToken> _joinParagraphs(
+    Iterable<List<kumi.AstToken>> paragraphs,
+  ) {
+    final tokens = <kumi.AstToken>[];
+    var first = true;
+    for (final paragraph in paragraphs) {
+      if (!first) {
+        tokens.add(const kumi.AstNewLine());
+      }
+      first = false;
+      tokens.addAll(paragraph);
+    }
+    return tokens;
+  }
+
+  List<kumi.AstToken> _plainParagraphFromText(String rawText) {
+    final normalized = rawText
+        .replaceAll('\u00a0', ' ')
+        .replaceAll(RegExp(r'[\t\r]+'), ' ')
+        .trim();
+    if (normalized.isEmpty) {
+      return const <kumi.AstToken>[];
+    }
+    return _normalizeTextTokens(normalized);
+  }
+
+  List<kumi.AstToken> _normalizeParagraph(List<kumi.AstToken> paragraph) {
+    if (_isBlankParagraph(paragraph)) {
+      return const <kumi.AstToken>[];
+    }
+    final plainText = _plainText(paragraph).trim();
+    if (plainText.isNotEmpty && _isDividerText(plainText)) {
+      return const <kumi.AstToken>[kumi.AstText('――――')];
+    }
+    return paragraph;
+  }
+
+  bool _isBlankParagraph(List<kumi.AstToken> paragraph) {
+    if (paragraph.isEmpty) {
+      return true;
+    }
+    final plainText = _plainText(paragraph);
+    return plainText.replaceAll(RegExp(r'[\s　]+'), '').isEmpty;
+  }
+
+  List<List<kumi.AstToken>> _trimEdgeBlankParagraphs(
+    List<List<kumi.AstToken>> paragraphs,
+  ) {
+    final trimmed = List<List<kumi.AstToken>>.from(paragraphs);
+    while (trimmed.isNotEmpty && _isBlankParagraph(trimmed.first)) {
+      trimmed.removeAt(0);
+    }
+    while (trimmed.isNotEmpty && _isBlankParagraph(trimmed.last)) {
+      trimmed.removeLast();
+    }
+    return trimmed;
+  }
+
+  bool _isDividerText(String text) {
+    final normalized = text
+        .replaceAll('＊', '*')
+        .replaceAll('＝', '=')
+        .replaceAll('＿', '_')
+        .replaceAll(RegExp(r'[ー―−－]'), '-');
+    return RegExp(r'^([*=_-])\1{3,}$').hasMatch(normalized);
+  }
+
+  String _plainText(List<kumi.AstToken> tokens) {
+    final buffer = StringBuffer();
+    for (final token in tokens) {
+      switch (token) {
+        case kumi.AstText(text: final text):
+          buffer.write(text);
+        case kumi.AstAttachedText(boundary: final boundary)
+            when boundary == kumi.AstRangeBoundary.start:
+        case kumi.AstAttachedText():
+        case kumi.AstStyledText():
+        case kumi.AstLink():
+        case kumi.AstInlineDecoration():
+        case kumi.AstHeading():
+          break;
+        default:
+          return '';
+      }
+    }
+    return buffer.toString();
+  }
+
+  List<kumi.AstToken> _normalizeTextTokens(String text) {
+    final tokens = <kumi.AstToken>[];
     final buffer = StringBuffer();
     var index = 0;
 
@@ -296,17 +321,22 @@ class NarouKumihanParser {
       final digitRunLength = _digitRunLength(text, index);
       if (digitRunLength == 2) {
         if (buffer.isNotEmpty) {
-          children.add(KumihanTextInline(buffer.toString()));
+          tokens.add(kumi.AstText(buffer.toString()));
           buffer.clear();
         }
-        children.add(
-          KumihanStyledInline(
-            children: <KumihanInline>[
-              KumihanTextInline(
-                _toHalfWidthDigits(text.substring(index, index + 2)),
-              ),
-            ],
-            style: '縦中横',
+        tokens.add(
+          const kumi.AstInlineDecoration(
+            boundary: kumi.AstRangeBoundary.start,
+            kind: kumi.AstInlineDecorationKind.tatechuyoko,
+          ),
+        );
+        tokens.add(
+          kumi.AstText(_toHalfWidthDigits(text.substring(index, index + 2))),
+        );
+        tokens.add(
+          const kumi.AstInlineDecoration(
+            boundary: kumi.AstRangeBoundary.end,
+            kind: kumi.AstInlineDecorationKind.tatechuyoko,
           ),
         );
         index += 2;
@@ -322,10 +352,9 @@ class NarouKumihanParser {
     }
 
     if (buffer.isNotEmpty) {
-      children.add(KumihanTextInline(buffer.toString()));
+      tokens.add(kumi.AstText(buffer.toString()));
     }
-
-    return children;
+    return tokens;
   }
 
   int _digitRunLength(String text, int start) {
@@ -353,408 +382,11 @@ class NarouKumihanParser {
     return buffer.toString();
   }
 
-  bool _isDividerParagraph(List<KumihanInline> children) {
-    final text = _plainText(children).trim();
-    if (text.isEmpty) {
-      return false;
-    }
-    final normalized = text
-        .replaceAll('＊', '*')
-        .replaceAll('＝', '=')
-        .replaceAll('＿', '_')
-        .replaceAll(RegExp(r'[ー―−－]'), '-');
-    return RegExp(r'^([*=\-_])\1{3,}$').hasMatch(normalized);
-  }
-
-  bool _isBlankInlineList(List<KumihanInline> children) {
-    if (children.isEmpty) {
-      return true;
-    }
-    for (final child in children) {
-      switch (child) {
-        case KumihanTextInline():
-          final text = child.text.replaceAll(RegExp(r'[\s　]+'), '');
-          if (text.isNotEmpty) {
-            return false;
-          }
-          break;
-        case KumihanStyledInline():
-          if (!_isBlankInlineList(child.children)) {
-            return false;
-          }
-          break;
-        case KumihanLinkInline():
-          if (!_isBlankInlineList(child.children)) {
-            return false;
-          }
-          break;
-        case KumihanRubyInline():
-          if (!_isBlankInlineList(child.children)) {
-            return false;
-          }
-          break;
-        default:
-          return false;
-      }
-    }
-    return true;
-  }
-
-  String _plainText(List<KumihanInline> children) {
-    final buffer = StringBuffer();
-    for (final child in children) {
-      switch (child) {
-        case KumihanTextInline():
-          buffer.write(child.text);
-          break;
-        case KumihanStyledInline():
-          buffer.write(_plainText(child.children));
-          break;
-        case KumihanLinkInline():
-          buffer.write(_plainText(child.children));
-          break;
-        case KumihanRubyInline():
-          buffer.write(_plainText(child.children));
-          break;
-        default:
-          return '';
-      }
-    }
-    return buffer.toString();
-  }
-
-  KumihanParagraphBlock _dividerBlock() {
-    return const KumihanParagraphBlock(
-      children: <KumihanInline>[KumihanTextInline('――――')],
-    );
-  }
-
-  List<KumihanBlock> _trimEdgeBlankParagraphs(List<KumihanBlock> blocks) {
-    final trimmed = List<KumihanBlock>.from(blocks);
-    while (trimmed.isNotEmpty && _isBlankParagraph(trimmed.first)) {
-      trimmed.removeAt(0);
-    }
-    while (trimmed.isNotEmpty && _isBlankParagraph(trimmed.last)) {
-      trimmed.removeLast();
-    }
-    return trimmed;
-  }
-
-  void _trimTrailingBlankParagraphs(List<KumihanBlock> blocks) {
-    while (blocks.isNotEmpty && _isBlankParagraph(blocks.last)) {
-      blocks.removeLast();
-    }
-  }
-
-  bool _isBlankParagraph(KumihanBlock block) {
-    return block is KumihanParagraphBlock && _isBlankInlineList(block.children);
-  }
-
   String _headerTitle(NarouEpisodePage page) {
     final parts = <String>[
       if ((page.novelTitle ?? '').isNotEmpty) page.novelTitle!,
       if ((page.title ?? '').isNotEmpty) page.title!,
     ];
-    if (parts.isEmpty) {
-      return '';
-    }
     return parts.join(' / ');
-  }
-}
-
-class _ParserContext {
-  const _ParserContext({required this.baseUrl});
-
-  final String baseUrl;
-
-  List<KumihanBlock> parseBlockChildren(Iterable<html.Node> nodes) {
-    final blocks = <KumihanBlock>[];
-    for (final node in nodes) {
-      blocks.addAll(_parseBlock(node));
-    }
-    return blocks;
-  }
-
-  List<KumihanBlock> _parseBlock(html.Node node) {
-    if (node is html.Text) {
-      return _paragraphsFromLooseText(node.text);
-    }
-    if (node is! html.Element) {
-      return const <KumihanBlock>[];
-    }
-
-    final tag = node.localName?.toLowerCase();
-    switch (tag) {
-      case 'p':
-        return <KumihanBlock>[
-          KumihanParagraphBlock(children: _parseInlineChildren(node.nodes)),
-        ];
-      case 'br':
-        return const <KumihanBlock>[
-          KumihanParagraphBlock(children: <KumihanInline>[]),
-        ];
-      case 'img':
-        return <KumihanBlock>[
-          KumihanParagraphBlock(children: _imageInlines(node)),
-        ];
-      case 'hr':
-        return const <KumihanBlock>[
-          KumihanParagraphBlock(
-            children: <KumihanInline>[KumihanTextInline('――――')],
-          ),
-        ];
-      case 'h1':
-      case 'h2':
-      case 'h3':
-      case 'h4':
-      case 'h5':
-      case 'h6':
-        return <KumihanBlock>[
-          KumihanParagraphBlock(
-            children: <KumihanInline>[
-              KumihanStyledInline(
-                children: _parseInlineChildren(node.nodes),
-                style: '中見出し',
-              ),
-            ],
-          ),
-        ];
-      case 'div':
-      case 'section':
-      case 'article':
-      case 'figure':
-      case 'body':
-        return parseBlockChildren(node.nodes);
-      case 'ul':
-      case 'ol':
-        return _parseList(node, ordered: tag == 'ol');
-      default:
-        return <KumihanBlock>[
-          KumihanParagraphBlock(children: _parseInlineChildren(node.nodes)),
-        ];
-    }
-  }
-
-  List<KumihanBlock> _parseList(html.Element list, {required bool ordered}) {
-    final blocks = <KumihanBlock>[];
-    var index = ordered ? int.tryParse(list.attributes['start'] ?? '') ?? 1 : 1;
-    for (final child in list.children) {
-      if (child.localName?.toLowerCase() != 'li') {
-        continue;
-      }
-      final marker = ordered ? '$index. ' : '・';
-      final children = <KumihanInline>[
-        KumihanTextInline(marker),
-        ..._parseInlineChildren(child.nodes),
-      ];
-      blocks.add(KumihanParagraphBlock(children: children));
-      index += 1;
-    }
-    return blocks;
-  }
-
-  List<KumihanBlock> _paragraphsFromLooseText(String rawText) {
-    final normalized = rawText
-        .replaceAll('\u00a0', ' ')
-        .replaceAll(RegExp(r'[\t\r]+'), ' ')
-        .trim();
-    if (normalized.isEmpty) {
-      return const <KumihanBlock>[];
-    }
-
-    return normalized
-        .split('\n')
-        .map(
-          (line) => KumihanParagraphBlock(
-            children: <KumihanInline>[KumihanTextInline(line.trim())],
-          ),
-        )
-        .toList(growable: false);
-  }
-
-  List<KumihanInline> _parseInlineChildren(Iterable<html.Node> nodes) {
-    final children = <KumihanInline>[];
-    for (final node in nodes) {
-      children.addAll(_parseInline(node));
-    }
-    return _splitAndTrimParagraphChildren(_mergeAdjacentText(children));
-  }
-
-  List<KumihanInline> _parseInline(html.Node node) {
-    if (node is html.Text) {
-      final text = _normalizeInlineText(node.text);
-      if (text.isEmpty) {
-        return const <KumihanInline>[];
-      }
-      return <KumihanInline>[KumihanTextInline(text)];
-    }
-    if (node is! html.Element) {
-      return const <KumihanInline>[];
-    }
-
-    final tag = node.localName?.toLowerCase();
-    switch (tag) {
-      case 'br':
-        return const <KumihanInline>[KumihanTextInline('\n')];
-      case 'img':
-        return _imageInlines(node);
-      case 'a':
-        final children = _parseInlineChildren(node.nodes);
-        if (children.length == 1 && children.first is KumihanImageInline) {
-          return children;
-        }
-        final href = absoluteUrl(node.attributes['href'], baseUrl);
-        if (href == null || href.isEmpty) {
-          return children;
-        }
-        return <KumihanInline>[
-          KumihanLinkInline(children: children, target: href),
-        ];
-      case 'ruby':
-        return _parseRuby(node);
-      case 'strong':
-      case 'b':
-        return <KumihanInline>[
-          KumihanStyledInline(
-            children: _parseInlineChildren(node.nodes),
-            style: '太字',
-          ),
-        ];
-      case 'em':
-      case 'i':
-        return <KumihanInline>[
-          KumihanStyledInline(
-            children: _parseInlineChildren(node.nodes),
-            style: '斜体',
-          ),
-        ];
-      case 'div':
-      case 'span':
-      case 'section':
-      case 'article':
-        return _parseInlineChildren(node.nodes);
-      default:
-        return _parseInlineChildren(node.nodes);
-    }
-  }
-
-  List<KumihanInline> _parseRuby(html.Element node) {
-    final ruby = <String>[];
-    final baseChildren = <KumihanInline>[];
-
-    for (final child in node.nodes) {
-      if (child is html.Element) {
-        final tag = child.localName?.toLowerCase();
-        if (tag == 'rt') {
-          final text = _normalizeInlineText(child.text).trim();
-          if (text.isNotEmpty) {
-            ruby.add(text);
-          }
-          continue;
-        }
-        if (tag == 'rp') {
-          continue;
-        }
-      }
-      baseChildren.addAll(_parseInline(child));
-    }
-
-    final mergedBase = _splitAndTrimParagraphChildren(
-      _mergeAdjacentText(baseChildren),
-    );
-    final annotation = ruby.join(' ').trim();
-    if (mergedBase.isEmpty) {
-      return annotation.isEmpty
-          ? const <KumihanInline>[]
-          : <KumihanInline>[KumihanTextInline(annotation)];
-    }
-    if (annotation.isEmpty) {
-      return mergedBase;
-    }
-    return <KumihanInline>[
-      KumihanRubyInline(children: mergedBase, ruby: annotation),
-    ];
-  }
-
-  List<KumihanInline> _imageInlines(html.Element node) {
-    final src = absoluteUrl(node.attributes['src'], baseUrl);
-    if (src == null || src.isEmpty) {
-      final alt = _normalizeInlineText(node.attributes['alt'] ?? '');
-      return alt.isEmpty
-          ? const <KumihanInline>[]
-          : <KumihanInline>[KumihanTextInline(alt)];
-    }
-
-    return <KumihanInline>[
-      KumihanImageInline(
-        path: src,
-        width: _parseDimension(node.attributes['width']),
-        height: _parseDimension(node.attributes['height']),
-      ),
-    ];
-  }
-
-  String _normalizeInlineText(String value) {
-    return value
-        .replaceAll('\u00a0', ' ')
-        .replaceAll(RegExp(r'[ \t\r\n]+'), ' ');
-  }
-
-  List<KumihanInline> _mergeAdjacentText(List<KumihanInline> children) {
-    final merged = <KumihanInline>[];
-    for (final child in children) {
-      if (child is KumihanTextInline &&
-          merged.isNotEmpty &&
-          merged.last is KumihanTextInline) {
-        final previous = merged.removeLast() as KumihanTextInline;
-        merged.add(KumihanTextInline(previous.text + child.text));
-        continue;
-      }
-      merged.add(child);
-    }
-    return merged;
-  }
-
-  List<KumihanInline> _splitAndTrimParagraphChildren(
-    List<KumihanInline> children,
-  ) {
-    final trimmed = List<KumihanInline>.from(children);
-    if (trimmed.isEmpty) {
-      return trimmed;
-    }
-
-    if (trimmed.first case final KumihanTextInline first) {
-      final text = first.text.replaceFirst(RegExp(r'^[ \t\f]+'), '');
-      trimmed[0] = KumihanTextInline(text);
-      if (text.isEmpty) {
-        trimmed.removeAt(0);
-      }
-    }
-
-    if (trimmed.isEmpty) {
-      return trimmed;
-    }
-
-    if (trimmed.last case final KumihanTextInline last) {
-      final text = last.text.replaceFirst(RegExp(r'[ \t\f]+$'), '');
-      trimmed[trimmed.length - 1] = KumihanTextInline(text);
-      if (text.isEmpty) {
-        trimmed.removeLast();
-      }
-    }
-
-    return trimmed;
-  }
-
-  double? _parseDimension(String? raw) {
-    final normalized = raw?.trim() ?? '';
-    if (normalized.isEmpty) {
-      return null;
-    }
-    final match = RegExp(r'^[0-9]+(?:\.[0-9]+)?').firstMatch(normalized);
-    if (match == null) {
-      return null;
-    }
-    return double.tryParse(match.group(0)!);
   }
 }

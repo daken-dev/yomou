@@ -93,7 +93,7 @@ class AppDatabase {
 
     if (currentVersion == 0) {
       _createSchema(database);
-      database.execute('PRAGMA user_version = 7');
+      database.execute('PRAGMA user_version = 8');
       return;
     }
 
@@ -121,7 +121,11 @@ class AppDatabase {
       _migrateToV7(database);
     }
 
-    database.execute('PRAGMA user_version = 7');
+    if (currentVersion < 8) {
+      _migrateToV8(database);
+    }
+
+    database.execute('PRAGMA user_version = 8');
   }
 
   void _createSchema(sqlite.Database database) {
@@ -246,11 +250,20 @@ class AppDatabase {
         reader_use_paper_texture INTEGER NOT NULL DEFAULT 1,
         reader_paper_color TEXT NOT NULL DEFAULT 'washi',
         reader_font_size REAL NOT NULL DEFAULT 20,
-        reader_padding_top REAL NOT NULL DEFAULT 16,
-        reader_padding_bottom REAL NOT NULL DEFAULT 16,
-        reader_padding_left REAL NOT NULL DEFAULT 16,
-        reader_padding_right REAL NOT NULL DEFAULT 16,
+        reader_top_ui_padding_top REAL NOT NULL DEFAULT 0,
+        reader_top_ui_padding_bottom REAL NOT NULL DEFAULT 0,
+        reader_top_ui_padding_left REAL NOT NULL DEFAULT 0,
+        reader_top_ui_padding_right REAL NOT NULL DEFAULT 0,
+        reader_body_padding_top REAL NOT NULL DEFAULT 16,
+        reader_body_padding_inner REAL NOT NULL DEFAULT 16,
+        reader_body_padding_outer REAL NOT NULL DEFAULT 16,
+        reader_body_padding_bottom REAL NOT NULL DEFAULT 16,
+        reader_bottom_ui_padding_top REAL NOT NULL DEFAULT 0,
+        reader_bottom_ui_padding_bottom REAL NOT NULL DEFAULT 0,
+        reader_bottom_ui_padding_left REAL NOT NULL DEFAULT 0,
+        reader_bottom_ui_padding_right REAL NOT NULL DEFAULT 0,
         reader_landscape_double_page INTEGER NOT NULL DEFAULT 1,
+        reader_page_turn_animation_enabled INTEGER NOT NULL DEFAULT 1,
         reader_single_page_position TEXT NOT NULL DEFAULT 'center',
         reader_avoid_notch INTEGER NOT NULL DEFAULT 0,
         reader_show_preface INTEGER NOT NULL DEFAULT 1,
@@ -453,6 +466,112 @@ class AppDatabase {
       'reader_avoid_notch',
       'INTEGER NOT NULL DEFAULT 0',
     );
+  }
+
+  void _migrateToV8(sqlite.Database database) {
+    _addColumnIfMissing(
+      database,
+      'app_settings',
+      'reader_top_ui_padding_top',
+      'REAL NOT NULL DEFAULT 0',
+    );
+    _addColumnIfMissing(
+      database,
+      'app_settings',
+      'reader_top_ui_padding_bottom',
+      'REAL NOT NULL DEFAULT 0',
+    );
+    _addColumnIfMissing(
+      database,
+      'app_settings',
+      'reader_top_ui_padding_left',
+      'REAL NOT NULL DEFAULT 0',
+    );
+    _addColumnIfMissing(
+      database,
+      'app_settings',
+      'reader_top_ui_padding_right',
+      'REAL NOT NULL DEFAULT 0',
+    );
+    _addColumnIfMissing(
+      database,
+      'app_settings',
+      'reader_body_padding_top',
+      'REAL NOT NULL DEFAULT 16',
+    );
+    _addColumnIfMissing(
+      database,
+      'app_settings',
+      'reader_body_padding_inner',
+      'REAL NOT NULL DEFAULT 16',
+    );
+    _addColumnIfMissing(
+      database,
+      'app_settings',
+      'reader_body_padding_outer',
+      'REAL NOT NULL DEFAULT 16',
+    );
+    _addColumnIfMissing(
+      database,
+      'app_settings',
+      'reader_body_padding_bottom',
+      'REAL NOT NULL DEFAULT 16',
+    );
+    _addColumnIfMissing(
+      database,
+      'app_settings',
+      'reader_bottom_ui_padding_top',
+      'REAL NOT NULL DEFAULT 0',
+    );
+    _addColumnIfMissing(
+      database,
+      'app_settings',
+      'reader_bottom_ui_padding_bottom',
+      'REAL NOT NULL DEFAULT 0',
+    );
+    _addColumnIfMissing(
+      database,
+      'app_settings',
+      'reader_bottom_ui_padding_left',
+      'REAL NOT NULL DEFAULT 0',
+    );
+    _addColumnIfMissing(
+      database,
+      'app_settings',
+      'reader_bottom_ui_padding_right',
+      'REAL NOT NULL DEFAULT 0',
+    );
+    _addColumnIfMissing(
+      database,
+      'app_settings',
+      'reader_page_turn_animation_enabled',
+      'INTEGER NOT NULL DEFAULT 1',
+    );
+
+    database.execute('''
+      UPDATE app_settings
+      SET
+        reader_body_padding_top = COALESCE(
+          reader_body_padding_top,
+          reader_padding_top,
+          16
+        ),
+        reader_body_padding_bottom = COALESCE(
+          reader_body_padding_bottom,
+          reader_padding_bottom,
+          16
+        ),
+        reader_body_padding_inner = COALESCE(
+          reader_body_padding_inner,
+          reader_padding_left,
+          16
+        ),
+        reader_body_padding_outer = COALESCE(
+          reader_body_padding_outer,
+          reader_padding_right,
+          16
+        )
+    ''');
   }
 
   void _addColumnIfMissing(

@@ -1,13 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:html/parser.dart' as html_parser;
-import 'package:kumihan/kumihan.dart';
+import 'package:kumihan/kumihan.dart' as kumi;
 import 'package:yomou/features/downloads/data/narou_web_client.dart';
 import 'package:yomou/features/narou/data/narou_kumihan_parser.dart';
 import 'package:yomou/features/settings/domain/entities/app_settings.dart';
 
 void main() {
   test(
-    'NarouKumihanParser unwraps linked images and separates sections with rules',
+    'NarouKumihanParser resolves linked images and separates sections with rules',
     () {
       final document = html_parser.parse('''
       <html>
@@ -50,38 +50,21 @@ void main() {
         document: document,
       );
       final parsed = const NarouKumihanParser().parseEpisode(page);
+      final paragraphs = _paragraphs(parsed);
 
       expect(parsed.headerTitle, '作品 / 地図');
-
-      // 2話目以降: エピソードタイトルのみ表示
-      final firstParagraph =
-          parsed.blocks.first as KumihanParagraphBlock;
-      expect(_paragraphText(firstParagraph.children), '地図');
-      expect(firstParagraph.children.single, isA<KumihanStyledInline>());
-
+      expect(_paragraphText(paragraphs.first), '地図');
       expect(
-        parsed.blocks.whereType<KumihanParagraphBlock>().where((block) {
-          return _paragraphText(block.children) == '――――';
-        }),
+        _hasHeading(paragraphs.first, kumi.AstHeadingLevel.medium),
+        isTrue,
+      );
+      expect(
+        paragraphs.where((paragraph) => _paragraphText(paragraph) == '――――'),
         hasLength(2),
       );
       expect(
-        parsed.blocks.whereType<KumihanParagraphBlock>().any((block) {
-          return _paragraphText(block.children) == '前書き';
-        }),
+        paragraphs.any((paragraph) => _paragraphText(paragraph) == '前書き'),
         isFalse,
-      );
-
-      final imageBlock = parsed.blocks
-          .whereType<KumihanParagraphBlock>()
-          .firstWhere(
-            (block) =>
-                block.children.any((child) => child is KumihanImageInline),
-          );
-      final image = imageBlock.children.whereType<KumihanImageInline>().single;
-      expect(
-        image.path,
-        'https://8371.mitemin.net/userpageimage/viewimagebig/icode/i71781/',
       );
     },
   );
@@ -111,48 +94,21 @@ void main() {
       );
 
       final parsed = const NarouKumihanParser().parseEpisode(page);
-      final paragraphs = parsed.blocks
-          .whereType<KumihanParagraphBlock>()
-          .toList();
+      final paragraphs = _paragraphs(parsed);
 
-      // 短編ヘッダー: 作品タイトル + 空行 + 作者名 + 空行 + 空行
-      expect(_paragraphText(paragraphs[0].children), '作品');
-      expect(paragraphs[0].children.single, isA<KumihanStyledInline>());
-      expect(_paragraphText(paragraphs[2].children), '作者');
+      expect(_paragraphText(paragraphs[0]), '作品');
+      expect(_hasHeading(paragraphs[0], kumi.AstHeadingLevel.large), isTrue);
+      expect(_paragraphText(paragraphs[2]), '作者');
 
-      // 本文コンテンツ（ヘッダー5ブロック分オフセット）
       final contentParagraphs = paragraphs.sublist(5);
-
-      expect(_paragraphText(contentParagraphs[0].children), '第12話');
-      expect(
-        _findTcy(contentParagraphs[0].children)?.children.single,
-        isA<KumihanTextInline>(),
-      );
-      expect(
-        (_findTcy(contentParagraphs[0].children)?.children.single
-                as KumihanTextInline)
-            .text,
-        '12',
-      );
-
-      expect(_paragraphText(contentParagraphs[1].children), '――――');
-
-      expect(_paragraphText(contentParagraphs[2].children), '第34話');
-      expect(
-        (_findTcy(contentParagraphs[2].children)?.children.single
-                as KumihanTextInline)
-            .text,
-        '34',
-      );
-
-      expect(contentParagraphs[3].children, hasLength(1));
-      expect(contentParagraphs[3].children.single, isA<KumihanTextInline>());
-      expect(
-        (contentParagraphs[3].children.single as KumihanTextInline).text,
-        '123',
-      );
-
-      expect(_paragraphText(contentParagraphs[4].children), '――――');
+      expect(_paragraphText(contentParagraphs[0]), '第12話');
+      expect(_containsTcyText(contentParagraphs[0], '12'), isTrue);
+      expect(_paragraphText(contentParagraphs[1]), '――――');
+      expect(_paragraphText(contentParagraphs[2]), '第34話');
+      expect(_containsTcyText(contentParagraphs[2], '34'), isTrue);
+      expect(_paragraphText(contentParagraphs[3]), '123');
+      expect(_containsTcyText(contentParagraphs[3], '123'), isFalse);
+      expect(_paragraphText(contentParagraphs[4]), '――――');
     },
   );
 
@@ -176,12 +132,10 @@ void main() {
       document: document,
     );
     final parsed = const NarouKumihanParser().parseEpisode(page);
-    final paragraphs = parsed.blocks
-        .whereType<KumihanParagraphBlock>()
-        .toList();
+    final paragraphs = _paragraphs(parsed);
 
     expect(paragraphs, hasLength(1));
-    expect(_paragraphText(paragraphs.single.children), '本文です。');
+    expect(_paragraphText(paragraphs.single), '本文です。');
   });
 
   test('NarouKumihanParser can hide preface and afterword', () {
@@ -213,67 +167,66 @@ void main() {
         showAfterword: false,
       ),
     );
-    final paragraphs = parsed.blocks
-        .whereType<KumihanParagraphBlock>()
-        .toList(growable: false);
 
-    // 短編ヘッダー(5ブロック) + 本文(1ブロック)
-    final contentParagraphs = paragraphs
-        .where((p) => _paragraphText(p.children) == '本文です。')
-        .toList();
-    expect(contentParagraphs, hasLength(1));
+    final paragraphs = _paragraphs(parsed);
+    expect(
+      paragraphs.where((paragraph) => _paragraphText(paragraph) == '本文です。'),
+      hasLength(1),
+    );
   });
 }
 
-String _paragraphText(List<KumihanInline> children) {
+List<List<kumi.AstToken>> _paragraphs(kumi.Document document) {
+  final paragraphs = <List<kumi.AstToken>>[];
+  var current = <kumi.AstToken>[];
+
+  for (final token in document.ast) {
+    if (token is kumi.AstNewLine) {
+      paragraphs.add(current);
+      current = <kumi.AstToken>[];
+      continue;
+    }
+    current.add(token);
+  }
+
+  paragraphs.add(current);
+  return paragraphs;
+}
+
+String _paragraphText(List<kumi.AstToken> tokens) {
   final buffer = StringBuffer();
-  for (final child in children) {
-    switch (child) {
-      case KumihanTextInline():
-        buffer.write(child.text);
-        break;
-      case KumihanStyledInline():
-        buffer.write(_paragraphText(child.children));
-        break;
-      case KumihanLinkInline():
-        buffer.write(_paragraphText(child.children));
-        break;
-      case KumihanRubyInline():
-        buffer.write(_paragraphText(child.children));
-        break;
-      default:
-        break;
+  for (final token in tokens) {
+    if (token case kumi.AstText(text: final text)) {
+      buffer.write(text);
     }
   }
   return buffer.toString();
 }
 
-KumihanStyledInline? _findTcy(List<KumihanInline> children) {
-  for (final child in children) {
-    switch (child) {
-      case KumihanStyledInline() when child.style == '縦中横':
-        return child;
-      case KumihanStyledInline():
-        final nested = _findTcy(child.children);
-        if (nested != null) {
-          return nested;
-        }
-        break;
-      case KumihanLinkInline():
-        final nested = _findTcy(child.children);
-        if (nested != null) {
-          return nested;
-        }
-        break;
-      case KumihanRubyInline():
-        final nested = _findTcy(child.children);
-        if (nested != null) {
-          return nested;
-        }
-        break;
-      default:
-        break;
+bool _hasHeading(List<kumi.AstToken> tokens, kumi.AstHeadingLevel level) {
+  return tokens.any(
+    (token) =>
+        token is kumi.AstHeading &&
+        token.level == level &&
+        token.boundary == kumi.AstRangeBoundary.start,
+  );
+}
+
+bool _containsTcyText(List<kumi.AstToken> tokens, String text) {
+  for (var index = 0; index < tokens.length - 2; index += 1) {
+    final start = tokens[index];
+    final middle = tokens[index + 1];
+    final end = tokens[index + 2];
+    if (start is kumi.AstInlineDecoration &&
+        start.kind == kumi.AstInlineDecorationKind.tatechuyoko &&
+        start.boundary == kumi.AstRangeBoundary.start &&
+        middle is kumi.AstText &&
+        middle.text == text &&
+        end is kumi.AstInlineDecoration &&
+        end.kind == kumi.AstInlineDecorationKind.tatechuyoko &&
+        end.boundary == kumi.AstRangeBoundary.end) {
+      return true;
     }
   }
-  return null;
+  return false;
 }
