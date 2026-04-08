@@ -25,7 +25,7 @@ bool isAtReaderTurnEdge({
     return true;
   }
   if (!isForward) {
-    return currentPage <= 0;
+    return currentPage < pageTurnAmount;
   }
   final lastTurnStart = (totalPages - pageTurnAmount).clamp(0, 1 << 30);
   return currentPage >= lastTurnStart;

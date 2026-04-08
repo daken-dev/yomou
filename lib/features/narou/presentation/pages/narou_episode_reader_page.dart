@@ -44,11 +44,16 @@ class _NarouEpisodeReaderPageState
   static const int _prefetchRemainingPagesThreshold = 4;
 
   final kumi.KumihanController _kumihanController = kumi.KumihanController();
+  static const kumi.KumihanSnapshot _initialSnapshot = kumi.KumihanSnapshot(
+    currentPage: 0,
+    totalPages: 0,
+  );
 
   late int _currentEpisodeNo;
   late String? _currentEpisodeUrl;
   var _controlsVisible = false;
   var _nextStartPosition = _EpisodeStartPosition.firstPage;
+  var _readerSnapshot = _initialSnapshot;
   NarouEpisodeReaderData? _latestData;
   _PendingRestorePosition? _pendingRestorePosition;
   Timer? _saveProgressDebounce;
@@ -107,7 +112,7 @@ class _NarouEpisodeReaderPageState
     };
     final readerSettings = appSettings.reader;
     final imageLoader = ref.watch(narouEpisodeImageCacheProvider).loadImage;
-    final snapshot = _kumihanController.snapshot;
+    final snapshot = _readerSnapshot;
     final readerTheme = readerSettings.toKumihanTheme(
       paperTexture: const AssetImage('assets/paper_textures/03.jpg'),
     );
@@ -213,6 +218,19 @@ class _NarouEpisodeReaderPageState
         data.page.sequenceCurrent != null && data.page.sequenceTotal != null
         ? '${data.page.sequenceCurrent} / ${data.page.sequenceTotal}'
         : null;
+    final pageTurnAmount = _pageTurnAmount();
+    final handleBackwardAtEdge = isAtReaderTurnEdge(
+      currentPage: snapshot.currentPage,
+      totalPages: snapshot.totalPages,
+      pageTurnAmount: pageTurnAmount,
+      isForward: false,
+    );
+    final handleForwardAtEdge = isAtReaderTurnEdge(
+      currentPage: snapshot.currentPage,
+      totalPages: snapshot.totalPages,
+      pageTurnAmount: pageTurnAmount,
+      isForward: true,
+    );
 
     return Stack(
       children: [
@@ -248,8 +266,14 @@ class _NarouEpisodeReaderPageState
         Positioned.fill(
           child: IgnorePointer(
             ignoring: _controlsVisible,
-            child: _ReaderCenterTapRegion(
+            child: _ReaderTapOverlay(
               pattern: readerSettings.tapPattern,
+              onBackward: handleBackwardAtEdge
+                  ? () => unawaited(_turnPage(isForward: false))
+                  : null,
+              onForward: handleForwardAtEdge
+                  ? () => unawaited(_turnPage(isForward: true))
+                  : null,
               onTap: _toggleControls,
             ),
           ),
@@ -558,6 +582,7 @@ class _NarouEpisodeReaderPageState
       _currentEpisodeUrl = episodeUrl;
       _controlsVisible = false;
       _nextStartPosition = startPosition;
+      _readerSnapshot = _initialSnapshot;
       _latestData = null;
       _pendingRestorePosition = null;
       _documentConfigKey = null;
@@ -635,6 +660,7 @@ class _NarouEpisodeReaderPageState
     required NarouEpisodeReaderData data,
     required kumi.KumihanSnapshot snapshot,
   }) {
+    _syncReaderSnapshot(snapshot);
     if (snapshot.totalPages <= 0) {
       return;
     }
@@ -848,6 +874,20 @@ class _NarouEpisodeReaderPageState
     _currentEpisodeOverrideFuture = null;
   }
 
+  void _syncReaderSnapshot(kumi.KumihanSnapshot snapshot) {
+    if (_readerSnapshot.currentPage == snapshot.currentPage &&
+        _readerSnapshot.totalPages == snapshot.totalPages) {
+      return;
+    }
+    if (!mounted) {
+      _readerSnapshot = snapshot;
+      return;
+    }
+    setState(() {
+      _readerSnapshot = snapshot;
+    });
+  }
+
   void _clearPrefetchState() {
     _prefetchToken = null;
     _prefetchRequest = null;
@@ -858,40 +898,55 @@ class _NarouEpisodeReaderPageState
 
 enum _EpisodeStartPosition { firstPage, lastPage }
 
-class _ReaderCenterTapRegion extends StatelessWidget {
-  const _ReaderCenterTapRegion({required this.pattern, required this.onTap});
+class _ReaderTapOverlay extends StatelessWidget {
+  const _ReaderTapOverlay({
+    required this.pattern,
+    required this.onTap,
+    this.onBackward,
+    this.onForward,
+  });
 
   final ReaderTapPattern pattern;
+  final VoidCallback? onBackward;
+  final VoidCallback? onForward;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return switch (pattern) {
-      ReaderTapPattern.leftCenterRight => Align(
-        alignment: Alignment.center,
-        child: FractionallySizedBox(
-          widthFactor: 1 / 3,
-          heightFactor: 1,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: onTap,
-            child: const SizedBox.expand(),
-          ),
-        ),
+      ReaderTapPattern.leftCenterRight => Row(
+        children: [
+          Expanded(child: _TapRegion(onTap: onForward)),
+          Expanded(child: _TapRegion(onTap: onTap)),
+          Expanded(child: _TapRegion(onTap: onBackward)),
+        ],
       ),
-      ReaderTapPattern.topCenterBottom => Align(
-        alignment: Alignment.center,
-        child: FractionallySizedBox(
-          widthFactor: 1,
-          heightFactor: 1 / 3,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: onTap,
-            child: const SizedBox.expand(),
-          ),
-        ),
+      ReaderTapPattern.topCenterBottom => Column(
+        children: [
+          Expanded(child: _TapRegion(onTap: onBackward)),
+          Expanded(child: _TapRegion(onTap: onTap)),
+          Expanded(child: _TapRegion(onTap: onForward)),
+        ],
       ),
     };
+  }
+}
+
+class _TapRegion extends StatelessWidget {
+  const _TapRegion({this.onTap});
+
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    if (onTap == null) {
+      return const SizedBox.expand();
+    }
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: const SizedBox.expand(),
+    );
   }
 }
 
