@@ -40,10 +40,6 @@ class _ReaderSettingsContent extends ConsumerWidget {
     return ListView(
       children: [
         _SectionHeader(title: '文字'),
-        const ListTile(
-          title: Text('組方向'),
-          subtitle: Text('kumihan 1.0.0 では縦組みのみ対応'),
-        ),
         _SegmentedTile<ReaderTapPattern>(
           label: 'タップ領域',
           segments: ReaderTapPattern.values,
@@ -54,9 +50,9 @@ class _ReaderSettingsContent extends ConsumerWidget {
         const SizedBox(height: 8),
         _SliderTile(
           label: '文字サイズ',
-          value: reader.fontSize.clamp(14, 32).toDouble(),
+          value: reader.fontSize.clamp(10, 32).toDouble(),
           displayValue: reader.fontSize.toStringAsFixed(0),
-          min: 14,
+          min: 10,
           max: 32,
           divisions: 18,
           onChanged: (value) => save(reader.copyWith(fontSize: value)),
@@ -186,6 +182,13 @@ class _ReaderSettingsContent extends ConsumerWidget {
           subtitle: const Text('紙の質感を再現する'),
           value: reader.usePaperTexture,
           onChanged: (value) => save(reader.copyWith(usePaperTexture: value)),
+        ),
+        SwitchListTile(
+          title: const Text('リーダー中央影の無効'),
+          subtitle: const Text('見開き中央の影を表示しない'),
+          value: reader.disableCenterShadow,
+          onChanged: (value) =>
+              save(reader.copyWith(disableCenterShadow: value)),
         ),
 
         const SizedBox(height: 8),

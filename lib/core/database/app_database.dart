@@ -93,7 +93,7 @@ class AppDatabase {
 
     if (currentVersion == 0) {
       _createSchema(database);
-      database.execute('PRAGMA user_version = 8');
+      database.execute('PRAGMA user_version = 9');
       return;
     }
 
@@ -125,7 +125,11 @@ class AppDatabase {
       _migrateToV8(database);
     }
 
-    database.execute('PRAGMA user_version = 8');
+    if (currentVersion < 9) {
+      _migrateToV9(database);
+    }
+
+    database.execute('PRAGMA user_version = 9');
   }
 
   void _createSchema(sqlite.Database database) {
@@ -248,6 +252,7 @@ class AppDatabase {
         reader_writing_mode TEXT NOT NULL DEFAULT 'vertical',
         reader_tap_pattern TEXT NOT NULL DEFAULT 'left_center_right',
         reader_use_paper_texture INTEGER NOT NULL DEFAULT 1,
+        reader_disable_center_shadow INTEGER NOT NULL DEFAULT 0,
         reader_paper_color TEXT NOT NULL DEFAULT 'washi',
         reader_font_size REAL NOT NULL DEFAULT 20,
         reader_top_ui_padding_top REAL NOT NULL DEFAULT 0,
@@ -572,6 +577,15 @@ class AppDatabase {
           16
         )
     ''');
+  }
+
+  void _migrateToV9(sqlite.Database database) {
+    _addColumnIfMissing(
+      database,
+      'app_settings',
+      'reader_disable_center_shadow',
+      'INTEGER NOT NULL DEFAULT 0',
+    );
   }
 
   void _addColumnIfMissing(

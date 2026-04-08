@@ -156,6 +156,7 @@ class ReaderSettings {
     required this.writingMode,
     required this.tapPattern,
     required this.usePaperTexture,
+    required this.disableCenterShadow,
     required this.paperColorPreset,
     required this.fontSize,
     required this.topUiPaddingTop,
@@ -182,6 +183,7 @@ class ReaderSettings {
     : writingMode = ReaderWritingMode.vertical,
       tapPattern = ReaderTapPattern.leftCenterRight,
       usePaperTexture = true,
+      disableCenterShadow = false,
       paperColorPreset = ReaderPaperColorPreset.washi,
       fontSize = 20,
       topUiPaddingTop = 0,
@@ -206,6 +208,7 @@ class ReaderSettings {
   final ReaderWritingMode writingMode;
   final ReaderTapPattern tapPattern;
   final bool usePaperTexture;
+  final bool disableCenterShadow;
   final ReaderPaperColorPreset paperColorPreset;
   final double fontSize;
   final double topUiPaddingTop;
@@ -298,6 +301,7 @@ class ReaderSettings {
       internalLinkColor: palette.internalLinkColor,
       paperTexture: usePaperTexture ? paperTexture : null,
       paperTextureOpacity: usePaperTexture ? 0.18 : 0,
+      disableGutterShadow: disableCenterShadow,
     );
   }
 
@@ -305,6 +309,7 @@ class ReaderSettings {
     ReaderWritingMode? writingMode,
     ReaderTapPattern? tapPattern,
     bool? usePaperTexture,
+    bool? disableCenterShadow,
     ReaderPaperColorPreset? paperColorPreset,
     double? fontSize,
     double? topUiPaddingTop,
@@ -330,6 +335,7 @@ class ReaderSettings {
       writingMode: writingMode ?? this.writingMode,
       tapPattern: tapPattern ?? this.tapPattern,
       usePaperTexture: usePaperTexture ?? this.usePaperTexture,
+      disableCenterShadow: disableCenterShadow ?? this.disableCenterShadow,
       paperColorPreset: paperColorPreset ?? this.paperColorPreset,
       fontSize: fontSize ?? this.fontSize,
       topUiPaddingTop: topUiPaddingTop ?? this.topUiPaddingTop,

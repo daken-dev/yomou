@@ -34,6 +34,7 @@ class SettingsStore {
           reader_writing_mode,
           reader_tap_pattern,
           reader_use_paper_texture,
+          reader_disable_center_shadow,
           reader_paper_color,
           reader_font_size,
           reader_top_ui_padding_top,
@@ -54,7 +55,7 @@ class SettingsStore {
           reader_avoid_notch,
           reader_show_preface,
           reader_show_afterword
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           theme_mode = excluded.theme_mode,
           open_home_novel_directly_in_reader =
@@ -62,6 +63,8 @@ class SettingsStore {
           reader_writing_mode = excluded.reader_writing_mode,
           reader_tap_pattern = excluded.reader_tap_pattern,
           reader_use_paper_texture = excluded.reader_use_paper_texture,
+          reader_disable_center_shadow =
+              excluded.reader_disable_center_shadow,
           reader_paper_color = excluded.reader_paper_color,
           reader_font_size = excluded.reader_font_size,
           reader_top_ui_padding_top = excluded.reader_top_ui_padding_top,
@@ -94,6 +97,7 @@ class SettingsStore {
           settings.reader.writingMode.storageValue,
           settings.reader.tapPattern.storageValue,
           settings.reader.usePaperTexture ? 1 : 0,
+          settings.reader.disableCenterShadow ? 1 : 0,
           settings.reader.paperColorPreset.storageValue,
           settings.reader.fontSize,
           settings.reader.topUiPaddingTop,
@@ -137,6 +141,8 @@ class SettingsStore {
           row['reader_tap_pattern'] as String?,
         ),
         usePaperTexture: _intValue(row['reader_use_paper_texture']) != 0,
+        disableCenterShadow:
+            _intValue(row['reader_disable_center_shadow']) != 0,
         paperColorPreset: ReaderPaperColorPresetX.fromStorageValue(
           row['reader_paper_color'] as String?,
         ),
